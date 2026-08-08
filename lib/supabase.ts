@@ -1,0 +1,1 @@
+export { supabaseAuth as supabase } from "./supabase-auth";
