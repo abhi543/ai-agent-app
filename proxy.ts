@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  console.log("[PROXY HIT]", request.nextUrl.pathname, request.nextUrl.search);
   return NextResponse.next({
     request,
   });
