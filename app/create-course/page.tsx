@@ -205,10 +205,20 @@ function DashboardContent() {
           "All lessons saved successfully."
         );
       } catch (error) {
-        console.error(
-          "Course creation failed:",
-          error
-        );
+        // Supabase errors (PostgrestError etc.) are plain objects with
+        // message/details/hint/code — not `instanceof Error` — so a bare
+        // console.error(error) can print as "{}" in the browser console.
+        // Log every likely field explicitly so the real reason is visible.
+        console.error("Course creation failed. Raw error object:", error);
+        console.error("Course creation failed. JSON:", JSON.stringify(error, null, 2));
+
+        if (error && typeof error === "object") {
+          const e = error as Record<string, unknown>;
+          console.error("  message:", e.message);
+          console.error("  details:", e.details);
+          console.error("  hint:", e.hint);
+          console.error("  code:", e.code);
+        }
 
         // Allow retry if something failed.
         sessionStorage.removeItem(
@@ -221,11 +231,14 @@ function DashboardContent() {
 
         setSavedCourseId(null);
 
-        setErrorMessage(
+        const readableMessage =
           error instanceof Error
             ? error.message
-            : "Something went wrong while creating the course."
-        );
+            : error && typeof error === "object" && "message" in error
+            ? String((error as { message: unknown }).message)
+            : "Something went wrong while creating the course.";
+
+        setErrorMessage(readableMessage);
       } finally {
         // Course creation is finished.
         sessionStorage.removeItem(
