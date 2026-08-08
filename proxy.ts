@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
-  console.log("[PROXY HIT]", request.nextUrl.pathname, request.nextUrl.search);
   return NextResponse.next({
     request,
   });
@@ -13,6 +12,6 @@ export const config = {
     "/course/:path*",
     "/lesson/:path*",
     "/lesson-v2/:path*",
-    "/create-course/:path*",
+    // "/create-course/:path*",  <- temporarily disabled to test
   ],
 };

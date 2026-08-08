@@ -1,461 +1,653 @@
 "use client";
 
-import { createCourse } from "@/lib/course";
-import { saveLessons } from "@/lib/lesson-db";
-import { createCourse as saveCourse } from "@/lib/course-db";
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  BrainCircuit,
+  Check,
+  Clock3,
+  Layers3,
+  Sparkles,
+  Target,
+  Zap,
+} from "lucide-react";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase";
-import { getAuthenticatedUser } from "@/lib/supabase-auth";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useAuth } from "@/app/providers/AuthProvider";
 
-interface GeneratedLesson {
-  lesson_number: number;
-  title: string;
-  content: string;
-}
+const features = [
+  {
+    icon: BrainCircuit,
+    title: "AI Mentor",
+    text: "Get explanations, examples, practice questions, and guidance while you learn.",
+  },
+  {
+    icon: Target,
+    title: "Personalized Journey",
+    text: "Your learning experience adapts to your level, goals, pace, and progress.",
+  },
+  {
+    icon: Layers3,
+    title: "Learn by Doing",
+    text: "Move from concepts to examples, practice, quizzes, and real application.",
+  },
+];
 
-interface LessonsPayload {
-  lessons?: GeneratedLesson[];
-}
+const stats = [
+  {
+    value: "AI",
+    label: "Personalized",
+  },
+  {
+    value: "24/7",
+    label: "Available",
+  },
+  {
+    value: "∞",
+    label: "Topics",
+  },
+];
 
-function DashboardContent() {
-  const searchParams = useSearchParams();
+export default function Home() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [goal, setGoal] = useState("");
+  const [goalError, setGoalError] = useState("");
 
-  const [savedCourseId, setSavedCourseId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  function handleStart() {
+    const trimmedGoal = goal.trim();
 
-  const goal = searchParams.get("goal");
-  const days = searchParams.get("days");
-  const normalizedGoal = goal?.trim() ?? "";
+    if (!trimmedGoal) {
+      // /create-course has no way to collect a goal itself — it
+      // requires one up front. Never navigate there without one;
+      // just point the user at this input instead.
+      setGoalError("Please tell us what you want to learn first.");
+      const input = document.getElementById("goal-input");
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+      input?.focus();
+      return;
+    }
 
-  const parsedDays = Number(days);
+    setGoalError("");
 
-  const validDays =
-    Number.isFinite(parsedDays) && parsedDays > 0
-      ? parsedDays
-      : 1;
-
-  const course = createCourse(normalizedGoal, validDays);
-
-  useEffect(() => {
-    // Use validDays here (not the raw parsedDays) — a missing
-    // ?days= param is a normal, valid case (defaults to 1 day),
-    // not an error. Number(null) is 0, which would otherwise
-    // fail this check even though validDays correctly falls
-    // back to 1 for display above.
-    if (!normalizedGoal || validDays < 1) {
-      setErrorMessage(
-        "A valid learning goal and duration are required. [check-v2]"
+    // Already signed in — skip signup entirely and go straight
+    // to course creation, so we never bounce a logged-in user
+    // back through the auth flow.
+    if (!authLoading && user) {
+      router.push(
+        `/create-course?goal=${encodeURIComponent(trimmedGoal)}`
       );
       return;
     }
 
-    const creationKey = `course-created:${normalizedGoal}:${parsedDays}`;
-    const creationLockKey = `course-creating:${normalizedGoal}:${parsedDays}`;
-
-    // Already created in this browser session.
-    const existingCourseId =
-      sessionStorage.getItem(creationKey);
-
-    if (existingCourseId) {
-      console.log(
-        "Course already exists:",
-        existingCourseId
-      );
-
-      setSavedCourseId(existingCourseId);
-      return;
-    }
-
-    // Prevent duplicate creation when the effect runs more than once.
-    const alreadyCreating =
-      sessionStorage.getItem(creationLockKey);
-
-    if (alreadyCreating === "true") {
-      console.log("Course creation already in progress.");
-      return;
-    }
-
-    // IMPORTANT: Set the lock BEFORE any async operation.
-    sessionStorage.setItem(
-      creationLockKey,
-      "true"
+    router.push(
+      `/auth/signup?goal=${encodeURIComponent(trimmedGoal)}`
     );
-
-    async function saveToDatabase() {
-      try {
-        setErrorMessage(null);
-
-        // Confirm authentication.
-        const user = await getAuthenticatedUser();
-
-        if (!user) {
-          sessionStorage.removeItem(creationLockKey);
-          setErrorMessage("Please sign in to create your course.");
-          return;
-        }
-
-        console.log(
-          "Creating course for user:",
-          user.id
-        );
-
-        // Create the course.
-        // course-db.ts automatically attaches user_id.
-        const savedCourse = await saveCourse({
-          topic: normalizedGoal,
-          level: "Beginner",
-          target_days: parsedDays,
-          total_lessons: parsedDays,
-          current_lesson: 1,
-          completed_lessons: 0,
-          progress: 0,
-        });
-
-        console.log(
-          "Course created:",
-          savedCourse.id
-        );
-
-        // Save the course ID so the same course is not created again.
-        sessionStorage.setItem(
-          creationKey,
-          savedCourse.id
-        );
-
-        setSavedCourseId(savedCourse.id);
-
-        // Generate lessons.
-        const response = await fetch(
-          "/api/generate-lessons",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              topic: normalizedGoal,
-              days: parsedDays,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-
-          console.error(
-            "Lesson generation failed:",
-            response.status,
-            errorText
-          );
-
-          throw new Error(
-            "Unable to generate lessons. Please try again."
-          );
-        }
-
-        const lessonsText =
-          await response.text();
-
-        let lessons: LessonsPayload;
-
-        try {
-          lessons =
-            JSON.parse(
-              lessonsText
-            ) as LessonsPayload;
-        } catch {
-          console.error(
-            "Invalid lesson response:",
-            lessonsText
-          );
-
-          throw new Error(
-            "Unable to parse the generated lessons."
-          );
-        }
-
-        const lessonItems =
-          lessons?.lessons;
-
-        if (!Array.isArray(lessonItems)) {
-          throw new Error(
-            "The lesson generator returned an invalid response."
-          );
-        }
-
-        // Save generated lessons.
-        // lesson-db.ts automatically attaches user_id.
-        await saveLessons(
-          lessonItems.map(
-            (lesson: GeneratedLesson) => ({
-              course_id: savedCourse.id,
-              lesson_number:
-                lesson.lesson_number,
-              title: lesson.title,
-              content: lesson.content,
-              completed: false,
-            })
-          )
-        );
-
-        console.log(
-          "All lessons saved successfully."
-        );
-      } catch (error) {
-        console.error(
-          "Course creation failed:",
-          error
-        );
-
-        // Allow retry if something failed.
-        sessionStorage.removeItem(
-          creationLockKey
-        );
-
-        sessionStorage.removeItem(
-          creationKey
-        );
-
-        setSavedCourseId(null);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Something went wrong while creating the course."
-        );
-      } finally {
-        // Course creation is finished.
-        sessionStorage.removeItem(
-          creationLockKey
-        );
-      }
-    }
-
-    saveToDatabase();
-  }, [goal, days, validDays, router]);
-
-  const progress = course.progress;
-
-  function openCourse() {
-    if (!savedCourseId) {
-      return;
-    }
-
-    router.push(`/course/${savedCourseId}`);
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
+    <main className="min-h-screen overflow-hidden bg-[#070A12] text-white">
 
-      <div className="mx-auto max-w-4xl">
+      {/* Background */}
 
-        {/* Logo */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
 
-        <div className="mb-8 flex justify-center">
+        <motion.div
+          animate={{
+            x: [0, 80, -30, 0],
+            y: [0, -40, 60, 0],
+            scale: [1, 1.08, 0.95, 1],
+          }}
+          transition={{
+            duration: 18,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute -left-32 top-10 h-[420px] w-[420px] rounded-full bg-blue-600/20 blur-[120px]"
+        />
 
-          <div className="h-16 w-16">
+        <motion.div
+          animate={{
+            x: [0, -60, 40, 0],
+            y: [0, 50, -30, 0],
+            scale: [1, 0.92, 1.08, 1],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute right-[-100px] top-[180px] h-[500px] w-[500px] rounded-full bg-violet-600/20 blur-[130px]"
+        />
 
-            <Image
-              src="/logo.svg"
-              alt="AI Tutor Logo"
-              width={64}
-              height={64}
-              priority
-            />
+        <motion.div
+          animate={{
+            x: [0, 30, -40, 0],
+            y: [0, -30, 30, 0],
+          }}
+          transition={{
+            duration: 16,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute bottom-[-180px] left-[35%] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[120px]"
+        />
 
-          </div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(7,10,18,0.75)_75%)]" />
 
-        </div>
+      </div>
 
-        {/* Header */}
+      {/* Navigation */}
 
-        <div className="mb-8 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-2xl">
+      <nav className="relative z-10 border-b border-white/[0.06] bg-[#070A12]/70 backdrop-blur-xl">
 
-          <div className="flex items-center justify-between">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
+
+          <div className="flex items-center gap-3">
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
+
+              <Image
+                src="/logo.svg"
+                alt="EduGPT"
+                width={30}
+                height={30}
+                priority
+              />
+
+            </div>
 
             <div>
-
-              <h1 className="mb-2 text-4xl font-bold">
-                🎯 Your Learning Journey Begins
-              </h1>
-
-              <p className="text-lg text-blue-100">
-                Your personalized AI tutor has prepared your learning plan.
+              <p className="text-lg font-bold tracking-tight">
+                EduGPT
               </p>
 
-            </div>
-
-            <div className="text-6xl opacity-20">
-              📚
+              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
+                AI Learning
+              </p>
             </div>
 
           </div>
 
-        </div>
+          <div className="flex items-center gap-3">
 
-        {/* Main Card */}
-
-        <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl">
-
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-
-            {/* Learning Goal */}
-
-            <div>
-
-              <div className="mb-6">
-
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                  Learning Goal
-                </h2>
-
-                <h3 className="mb-1 text-4xl font-bold text-gray-800">
-                  🎯 {course.topic}
-                </h3>
-
-                <p className="text-gray-500">
-                  Your main objective
-                </p>
-
-              </div>
-
-              {/* Duration */}
-
-              <div>
-
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                  Duration
-                </h2>
-
-                <p className="text-3xl font-bold text-gray-800">
-
-                  {course.targetDays}
-
-                  <span className="text-lg text-gray-500">
-                    {" "}days
-                  </span>
-
-                </p>
-
-                <p className="text-gray-500">
-                  Total learning period
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* Progress */}
-
-            <div className="flex flex-col justify-center rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6">
-
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                Today&apos;s Progress
-              </h2>
-
-              <div className="relative h-4 overflow-hidden rounded-full bg-gray-200">
-
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                  style={{
-                    width: `${progress}%`,
-                  }}
-                />
-
-              </div>
-
-              <p className="mt-2 text-gray-600">
-                {progress}% Complete
-              </p>
-
-              <p className="mt-5 text-center text-2xl font-bold text-blue-600">
-                Let&apos;s get started! 🚀
-              </p>
-
-            </div>
-
-          </div>
-
-          {/* Error */}
-
-          {errorMessage && (
-
-            <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">
-
-              <p className="font-semibold">
-                Something went wrong
-              </p>
-
-              <p className="mt-1 text-sm">
-                {errorMessage}
-              </p>
-
-            </div>
-
-          )}
-
-          {/* Action */}
-
-          <div className="mt-8 border-t border-gray-100 pt-8">
-
-            {savedCourseId ? (
-
+            {!authLoading && user ? (
               <button
                 type="button"
-                onClick={openCourse}
-                className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 font-bold text-white shadow-lg transition hover:scale-105 hover:from-blue-700 hover:to-purple-700 active:scale-95"
+                onClick={() => router.push("/dashboard")}
+                className="rounded-xl border border-white/10 bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
               >
-                ✨ Start Learning Now
+                Go to dashboard
               </button>
-
-            ) : errorMessage ? (
-
-              <button
-                type="button"
-                onClick={() =>
-                  window.location.reload()
-                }
-                className="rounded-lg bg-blue-600 px-8 py-4 font-bold text-white transition hover:bg-blue-700"
-              >
-                Try Again
-              </button>
-
             ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => router.push("/auth/login")}
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+                >
+                  Sign in
+                </button>
 
-              <button
-                type="button"
-                disabled
-                suppressHydrationWarning
-                className="cursor-not-allowed rounded-lg bg-gray-300 px-8 py-4 font-bold text-gray-700"
-              >
-                Saving your course...
-              </button>
-
+                <button
+                  type="button"
+                  onClick={() => router.push("/auth/signup")}
+                  className="rounded-xl border border-white/10 bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+                >
+                  Get started
+                </button>
+              </>
             )}
 
           </div>
 
         </div>
 
-      </div>
+      </nav>
 
-    </div>
-  );
-}
+      {/* Hero */}
 
-export default function Dashboard() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          Loading dashboard...
+      <section className="relative z-10">
+
+        <div className="mx-auto max-w-7xl px-6 pb-20 pt-16 lg:px-10 lg:pb-28 lg:pt-24">
+
+          <div className="grid items-center gap-16 lg:grid-cols-[1.1fr_0.9fr]">
+
+            {/* Left */}
+
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+            >
+
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/[0.06] px-4 py-2 text-xs font-medium text-cyan-300">
+
+                <Sparkles size={14} />
+
+                Your AI-powered learning workspace
+
+              </div>
+
+              <h1 className="max-w-4xl text-5xl font-bold leading-[1.02] tracking-[-0.04em] sm:text-6xl lg:text-7xl">
+
+                Learn anything.
+
+                <span className="block bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent">
+                  Your way.
+                </span>
+
+              </h1>
+
+              <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-400 sm:text-xl">
+
+                EduGPT builds a personalized learning journey around
+                your goals, then stays beside you with an AI mentor
+                while you learn, practice, and improve.
+
+              </p>
+
+              {/* Goal Input */}
+
+              <div className="mt-9 max-w-2xl rounded-2xl border border-white/10 bg-white/[0.045] p-2 shadow-2xl shadow-black/20 backdrop-blur-xl">
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+
+                  <div className="flex flex-1 items-center gap-3 px-4">
+
+                    <BrainCircuit
+                      size={20}
+                      className="shrink-0 text-cyan-400"
+                    />
+
+                    <input
+                      id="goal-input"
+                      type="text"
+                      value={goal}
+                      onChange={(event) => {
+                        setGoal(event.target.value);
+                        if (goalError) setGoalError("");
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          handleStart();
+                        }
+                      }}
+                      placeholder="What do you want to learn?"
+                      className="w-full bg-transparent py-4 text-base text-white outline-none placeholder:text-slate-500"
+                    />
+
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleStart}
+                    className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-4 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:scale-[1.02] hover:shadow-blue-500/30"
+                  >
+                    Start learning
+
+                    <ArrowRight
+                      size={18}
+                      className="transition-transform group-hover:translate-x-1"
+                    />
+
+                  </button>
+
+                </div>
+
+                {goalError && (
+                  <p className="px-4 pb-2 pt-1 text-sm text-red-400">
+                    {goalError}
+                  </p>
+                )}
+
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+
+                <span className="flex items-center gap-2">
+                  <Check size={14} className="text-emerald-400" />
+                  Personalized
+                </span>
+
+                <span className="flex items-center gap-2">
+                  <Check size={14} className="text-emerald-400" />
+                  AI-guided
+                </span>
+
+                <span className="flex items-center gap-2">
+                  <Check size={14} className="text-emerald-400" />
+                  Learn at your pace
+                </span>
+
+              </div>
+
+            </motion.div>
+
+            {/* Right Preview */}
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                duration: 0.8,
+                delay: 0.15,
+              }}
+              className="relative"
+            >
+
+              <div className="absolute -inset-6 rounded-[36px] bg-gradient-to-br from-blue-500/10 via-violet-500/10 to-cyan-400/10 blur-2xl" />
+
+              <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#0D111C]/90 shadow-2xl shadow-black/40 backdrop-blur-xl">
+
+                {/* Preview Top */}
+
+                <div className="flex items-center justify-between border-b border-white/[0.06] px-5 py-4">
+
+                  <div className="flex items-center gap-3">
+
+                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.7)]" />
+
+                    <span className="text-xs font-medium text-slate-300">
+                      Learning workspace
+                    </span>
+
+                  </div>
+
+                  <span className="text-xs text-slate-500">
+                    Live preview
+                  </span>
+
+                </div>
+
+                {/* Preview Content */}
+
+                <div className="grid grid-cols-[0.32fr_0.68fr]">
+
+                  <div className="border-r border-white/[0.06] p-4">
+
+                    <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Journey
+                    </p>
+
+                    {[
+                      "Foundations",
+                      "Core Concepts",
+                      "Practice",
+                      "Projects",
+                    ].map((item, index) => (
+
+                      <div
+                        key={item}
+                        className={`mb-2 rounded-xl px-3 py-3 text-xs ${
+                          index === 0
+                            ? "border border-blue-500/20 bg-blue-500/10 text-blue-300"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {index === 0 ? "●" : "○"} {item}
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                  <div className="p-6">
+
+                    <div className="mb-5 flex items-center gap-2 text-cyan-400">
+
+                      <Sparkles size={16} />
+
+                      <span className="text-xs font-semibold">
+                        Personalized lesson
+                      </span>
+
+                    </div>
+
+                    <h3 className="text-2xl font-bold text-white">
+                      Master the fundamentals
+                    </h3>
+
+                    <p className="mt-3 text-sm leading-6 text-slate-400">
+                      Learn the concept, see a real example, practice
+                      it, then ask your AI mentor anything.
+                    </p>
+
+                    <div className="mt-6 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4">
+
+                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                        <Zap
+                          size={16}
+                          className="text-yellow-400"
+                        />
+                        AI Mentor
+                      </div>
+
+                      <p className="mt-2 text-xs leading-5 text-slate-500">
+                        “Want me to explain this with a simpler example?”
+                      </p>
+
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-3">
+
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800">
+
+                        <motion.div
+                          initial={{ width: "0%" }}
+                          animate={{ width: "62%" }}
+                          transition={{
+                            duration: 1.2,
+                            delay: 0.7,
+                          }}
+                          className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500"
+                        />
+
+                      </div>
+
+                      <span className="text-xs font-semibold text-cyan-300">
+                        62%
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </motion.div>
+
+          </div>
+
         </div>
-      }
-    >
-      <DashboardContent />
-    </Suspense>
+
+      </section>
+
+      {/* Stats */}
+
+      <section className="relative z-10 border-y border-white/[0.06] bg-white/[0.02]">
+
+        <div className="mx-auto grid max-w-7xl grid-cols-3 px-6 lg:px-10">
+
+          {stats.map((stat) => (
+
+            <div
+              key={stat.label}
+              className="border-r border-white/[0.06] px-4 py-7 text-center last:border-r-0"
+            >
+
+              <p className="text-2xl font-bold text-white">
+                {stat.value}
+              </p>
+
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">
+                {stat.label}
+              </p>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </section>
+
+      {/* Features */}
+
+      <section className="relative z-10">
+
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-24">
+
+          <div className="max-w-2xl">
+
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">
+              Built around the learner
+            </p>
+
+            <h2 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+              Not another course dashboard.
+            </h2>
+
+            <p className="mt-5 text-base leading-7 text-slate-400">
+              EduGPT is designed around the actual learning experience:
+              understanding, practicing, asking questions, and making progress.
+            </p>
+
+          </div>
+
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+
+            {features.map((feature, index) => {
+
+              const Icon = feature.icon;
+
+              return (
+                <motion.div
+                  key={feature.title}
+                  initial={{
+                    opacity: 0,
+                    y: 20,
+                  }}
+                  whileInView={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  viewport={{
+                    once: true,
+                    margin: "-80px",
+                  }}
+                  transition={{
+                    delay: index * 0.08,
+                  }}
+                  whileHover={{
+                    y: -5,
+                  }}
+                  className="group rounded-3xl border border-white/[0.07] bg-white/[0.035] p-6 backdrop-blur-xl transition hover:border-white/[0.12] hover:bg-white/[0.05]"
+                >
+
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500/10 to-violet-500/10 text-cyan-400">
+
+                    <Icon size={22} />
+
+                  </div>
+
+                  <h3 className="mt-6 text-lg font-semibold text-white">
+                    {feature.title}
+                  </h3>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    {feature.text}
+                  </p>
+
+                </motion.div>
+              );
+            })}
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* Bottom CTA */}
+
+      <section className="relative z-10 px-6 pb-16 lg:px-10">
+
+        <div className="mx-auto max-w-7xl">
+
+          <div className="relative overflow-hidden rounded-[32px] border border-white/[0.08] bg-gradient-to-r from-blue-600/10 via-violet-600/10 to-cyan-500/10 p-8 sm:p-12">
+
+            <div className="absolute right-0 top-0 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl" />
+
+            <div className="relative flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-center">
+
+              <div>
+
+                <div className="flex items-center gap-2 text-cyan-300">
+                  <Clock3 size={17} />
+                  <span className="text-sm font-medium">
+                    Start with your goal
+                  </span>
+                </div>
+
+                <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                  Your next skill starts here.
+                </h2>
+
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">
+                  Tell EduGPT what you want to master. We'll build the
+                  learning journey around you.
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  !authLoading && user
+                    ? handleStart()
+                    : router.push("/auth/signup")
+                }
+                className="group flex shrink-0 items-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-slate-950 transition hover:scale-[1.02]"
+              >
+                {!authLoading && user ? "Start a new course" : "Create your account"}
+
+                <ArrowRight
+                  size={17}
+                  className="transition-transform group-hover:translate-x-1"
+                />
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* Footer */}
+
+      <footer className="relative z-10 border-t border-white/[0.06] px-6 py-8 lg:px-10">
+
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 text-xs text-slate-600 sm:flex-row">
+
+          <p>
+            © {new Date().getFullYear()} EduGPT
+          </p>
+
+          <p>
+            Learn smarter. Build deeper.
+          </p>
+
+        </div>
+
+      </footer>
+
+    </main>
   );
 }

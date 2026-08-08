@@ -40,11 +40,12 @@ function DashboardContent() {
   const course = createCourse(normalizedGoal, validDays);
 
   useEffect(() => {
-    if (
-      !normalizedGoal ||
-      !Number.isFinite(parsedDays) ||
-      parsedDays < 1
-    ) {
+    // Use validDays here (not the raw parsedDays) — a missing
+    // ?days= param is a normal, valid case (defaults to 1 day),
+    // not an error. Number(null) is 0, which would otherwise
+    // fail this check even though validDays correctly falls
+    // back to 1 for display above.
+    if (!normalizedGoal || validDays < 1) {
       setErrorMessage(
         "A valid learning goal and duration are required."
       );
@@ -234,7 +235,7 @@ function DashboardContent() {
     }
 
     saveToDatabase();
-  }, [goal, days, parsedDays, router]);
+  }, [goal, days, validDays, router]);
 
   const progress = course.progress;
 
@@ -427,6 +428,7 @@ function DashboardContent() {
               <button
                 type="button"
                 disabled
+                suppressHydrationWarning
                 className="cursor-not-allowed rounded-lg bg-gray-300 px-8 py-4 font-bold text-gray-700"
               >
                 Saving your course...
