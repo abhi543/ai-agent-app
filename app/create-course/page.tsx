@@ -5,7 +5,15 @@ import { saveLessons } from "@/lib/lesson-db";
 import { createCourse as saveCourse } from "@/lib/course-db";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  BrainCircuit,
+  CheckCircle2,
+  Flame,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import { getAuthenticatedUser } from "@/lib/supabase-auth";
 
 interface GeneratedLesson {
@@ -66,6 +74,19 @@ function estimateDays(level: Level, dailyMinutes: number, style: Style): number 
 // ------------------------------------------------------------------------
 
 type WizardStep = "level" | "time" | "style" | "generating";
+
+const WIZARD_STEP_ORDER: WizardStep[] = ["level", "time", "style"];
+
+function GlowBackground() {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div className="absolute -left-40 top-20 h-[420px] w-[420px] rounded-full bg-blue-600/10 blur-[120px]" />
+      <div className="absolute right-[-140px] top-[260px] h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[140px]" />
+      <div className="absolute bottom-[-180px] left-[35%] h-[400px] w-[400px] rounded-full bg-cyan-500/5 blur-[120px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(7,10,18,0.8)_80%)]" />
+    </div>
+  );
+}
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -238,55 +259,74 @@ function DashboardContent() {
 
   if (!normalizedGoal) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
-        <div className="mx-auto max-w-2xl rounded-2xl border border-red-200 bg-red-50 p-8 text-red-700">
-          <p className="font-semibold">Something went wrong</p>
-          <p className="mt-1 text-sm">A valid learning goal is required.</p>
+      <main className="min-h-screen overflow-hidden bg-[#070A12] text-white">
+        <GlowBackground />
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
+          <div className="rounded-3xl border border-red-400/20 bg-red-400/[0.06] p-8 text-center">
+            <p className="text-lg font-semibold text-red-300">Something went wrong</p>
+            <p className="mt-2 text-sm text-slate-400">A valid learning goal is required.</p>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   // ---- Wizard steps: Level -> Daily time -> Learning style ----
   if (wizardStep !== "generating") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
-        <div className="mx-auto max-w-2xl">
+      <main className="min-h-screen overflow-hidden bg-[#070A12] text-white">
+        <GlowBackground />
 
-          <div className="mb-8 flex justify-center">
-            <div className="h-16 w-16">
-              <Image src="/logo.svg" alt="AI Tutor Logo" width={64} height={64} priority />
-            </div>
-          </div>
+        <div className="relative z-10 mx-auto max-w-2xl px-6 py-14 lg:py-20">
 
-          <div className="mb-6 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white shadow-xl">
-            <p className="text-sm font-semibold uppercase tracking-wider text-blue-100">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex items-center gap-2 text-xs font-medium text-cyan-300"
+          >
+            <Sparkles size={14} />
+            Building your personalized journey
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-br from-blue-500/10 via-violet-500/10 to-cyan-500/5 p-6 shadow-2xl shadow-black/20 backdrop-blur-xl"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Learning goal
             </p>
-            <h1 className="mt-1 text-2xl font-bold">🎯 {normalizedGoal}</h1>
-          </div>
+            <h1 className="mt-2 flex items-center gap-2 text-2xl font-bold">
+              <Target size={22} className="text-cyan-400 shrink-0" />
+              {normalizedGoal}
+            </h1>
+          </motion.div>
 
-          <div className="mb-6 flex items-center justify-center gap-2">
-            {(["level", "time", "style"] as WizardStep[]).map((s, i) => (
+          <div className="mb-8 flex items-center justify-center gap-2">
+            {WIZARD_STEP_ORDER.map((s, i) => (
               <div
                 key={s}
-                className={`h-1.5 w-16 rounded-full ${
-                  ["level", "time", "style"].indexOf(wizardStep) >= i
-                    ? "bg-blue-600"
-                    : "bg-gray-200"
+                className={`h-1.5 w-16 rounded-full transition ${
+                  WIZARD_STEP_ORDER.indexOf(wizardStep) >= i
+                    ? "bg-gradient-to-r from-blue-500 to-violet-600"
+                    : "bg-white/10"
                 }`}
               />
             ))}
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl">
+          <motion.div
+            key={wizardStep}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[28px] border border-white/10 bg-white/[0.035] p-8 backdrop-blur-xl"
+          >
 
             {wizardStep === "level" && (
               <>
-                <h2 className="mb-1 text-2xl font-bold text-gray-800">
-                  What&apos;s your current level?
-                </h2>
-                <p className="mb-6 text-gray-500">
+                <h2 className="mb-1 text-2xl font-bold">What&apos;s your current level?</h2>
+                <p className="mb-6 text-sm text-slate-400">
                   This helps us pitch lessons at the right depth.
                 </p>
                 <div className="grid gap-3">
@@ -298,10 +338,10 @@ function DashboardContent() {
                         setLevel(opt.value);
                         setWizardStep("time");
                       }}
-                      className="rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+                      className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.06]"
                     >
-                      <p className="font-semibold text-gray-800">{opt.label}</p>
-                      <p className="text-sm text-gray-500">{opt.desc}</p>
+                      <p className="font-semibold text-white">{opt.label}</p>
+                      <p className="text-sm text-slate-500">{opt.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -310,10 +350,10 @@ function DashboardContent() {
 
             {wizardStep === "time" && (
               <>
-                <h2 className="mb-1 text-2xl font-bold text-gray-800">
+                <h2 className="mb-1 text-2xl font-bold">
                   How much time can you study each day?
                 </h2>
-                <p className="mb-6 text-gray-500">
+                <p className="mb-6 text-sm text-slate-400">
                   We&apos;ll pace your journey around this.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -325,7 +365,7 @@ function DashboardContent() {
                         setDailyMinutes(opt.value);
                         setWizardStep("style");
                       }}
-                      className="rounded-xl border border-gray-200 p-4 text-center font-semibold text-gray-800 transition hover:border-blue-400 hover:bg-blue-50"
+                      className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 text-center font-semibold text-white transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.06]"
                     >
                       {opt.label}
                     </button>
@@ -334,7 +374,7 @@ function DashboardContent() {
                 <button
                   type="button"
                   onClick={() => setWizardStep("level")}
-                  className="mt-6 text-sm font-medium text-gray-500 hover:text-gray-700"
+                  className="mt-6 text-sm font-medium text-slate-500 hover:text-slate-300"
                 >
                   ← Back
                 </button>
@@ -343,10 +383,8 @@ function DashboardContent() {
 
             {wizardStep === "style" && (
               <>
-                <h2 className="mb-1 text-2xl font-bold text-gray-800">
-                  What learning style fits you?
-                </h2>
-                <p className="mb-6 text-gray-500">
+                <h2 className="mb-1 text-2xl font-bold">What learning style fits you?</h2>
+                <p className="mb-6 text-sm text-slate-400">
                   This shapes your pace and how much practice you get.
                 </p>
                 <div className="grid gap-3">
@@ -360,137 +398,165 @@ function DashboardContent() {
                           beginCourseCreation(level, dailyMinutes, opt.value);
                         }
                       }}
-                      className="rounded-xl border border-gray-200 p-4 text-left transition hover:border-blue-400 hover:bg-blue-50"
+                      className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.06]"
                     >
-                      <p className="font-semibold text-gray-800">{opt.label}</p>
-                      <p className="text-sm text-gray-500">{opt.desc}</p>
+                      <p className="font-semibold text-white">{opt.label}</p>
+                      <p className="text-sm text-slate-500">{opt.desc}</p>
                     </button>
                   ))}
                 </div>
                 <button
                   type="button"
                   onClick={() => setWizardStep("time")}
-                  className="mt-6 text-sm font-medium text-gray-500 hover:text-gray-700"
+                  className="mt-6 text-sm font-medium text-slate-500 hover:text-slate-300"
                 >
                   ← Back
                 </button>
               </>
             )}
 
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </main>
     );
   }
 
-  // ---- Generating / result screen (existing, working flow) ----
+  // ---- Generating / result screen ----
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-8">
+    <main className="min-h-screen overflow-hidden bg-[#070A12] text-white">
+      <GlowBackground />
 
-      <div className="mx-auto max-w-4xl">
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-14 lg:py-20">
 
-        <div className="mb-8 flex justify-center">
-          <div className="h-16 w-16">
-            <Image src="/logo.svg" alt="AI Tutor Logo" width={64} height={64} priority />
-          </div>
-        </div>
-
-        <div className="mb-8 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 text-white shadow-2xl">
-          <div className="flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative mb-8 overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-blue-500/15 via-violet-500/15 to-cyan-500/10 p-8 shadow-2xl shadow-black/20 backdrop-blur-xl"
+        >
+          <div className="absolute right-[-80px] top-[-100px] h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="relative flex items-center justify-between">
             <div>
-              <h1 className="mb-2 text-4xl font-bold">🎯 Your Learning Journey Begins</h1>
-              <p className="text-lg text-blue-100">
+              <h1 className="mb-2 flex items-center gap-2 text-3xl font-bold sm:text-4xl">
+                <Target size={28} className="text-cyan-400 shrink-0" />
+                Your Learning Journey Begins
+              </h1>
+              <p className="text-slate-400">
                 Your personalized AI tutor has prepared your learning plan.
               </p>
             </div>
-            <div className="text-6xl opacity-20">📚</div>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl">
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
 
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="rounded-[28px] border border-white/10 bg-white/[0.035] p-8 backdrop-blur-xl"
+          >
 
-            <div>
-              <div className="mb-6">
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                  Learning Goal
-                </h2>
-                <h3 className="mb-1 text-4xl font-bold text-gray-800">🎯 {course.topic}</h3>
-                <p className="text-gray-500">
-                  {level} · {dailyMinutes} min/day · {style}
-                </p>
-              </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Learning Goal
+            </p>
+            <h3 className="mt-1 flex items-center gap-2 text-3xl font-bold">
+              <Target size={22} className="text-cyan-400 shrink-0" />
+              {course.topic}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {level} · {dailyMinutes} min/day · {style}
+            </p>
 
-              <div>
-                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-gray-500">
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Duration
-                </h2>
-                <p className="text-3xl font-bold text-gray-800">
-                  {course.targetDays}
-                  <span className="text-lg text-gray-500"> days</span>
                 </p>
-                <p className="text-gray-500">Total learning period</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {course.targetDays}
+                  <span className="text-sm font-normal text-slate-500"> days</span>
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Level
+                </p>
+                <p className="mt-2 text-2xl font-bold">{level}</p>
               </div>
             </div>
 
-            <div className="flex flex-col justify-center rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 p-6">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">
-                Today&apos;s Progress
-              </h2>
-              <div className="relative h-4 overflow-hidden rounded-full bg-gray-200">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
+            {errorMessage && (
+              <div className="mt-6 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-5">
+                <p className="font-semibold text-red-300">Something went wrong</p>
+                <p className="mt-1 text-sm text-red-300/80">{errorMessage}</p>
               </div>
-              <p className="mt-2 text-gray-600">{progress}% Complete</p>
-              <p className="mt-5 text-center text-2xl font-bold text-blue-600">
-                Let&apos;s get started! 🚀
-              </p>
-            </div>
-
-          </div>
-
-          {errorMessage && (
-            <div className="mt-8 rounded-xl border border-red-200 bg-red-50 p-5 text-red-700">
-              <p className="font-semibold">Something went wrong</p>
-              <p className="mt-1 text-sm">{errorMessage}</p>
-            </div>
-          )}
-
-          <div className="mt-8 border-t border-gray-100 pt-8">
-            {savedCourseId ? (
-              <button
-                type="button"
-                onClick={openCourse}
-                className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 font-bold text-white shadow-lg transition hover:scale-105 hover:from-blue-700 hover:to-purple-700 active:scale-95"
-              >
-                ✨ Start Learning Now
-              </button>
-            ) : errorMessage ? (
-              <button
-                type="button"
-                onClick={retryCreation}
-                className="rounded-lg bg-blue-600 px-8 py-4 font-bold text-white transition hover:bg-blue-700"
-              >
-                Try Again
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled
-                suppressHydrationWarning
-                className="cursor-not-allowed rounded-lg bg-gray-300 px-8 py-4 font-bold text-gray-700"
-              >
-                Saving your course...
-              </button>
             )}
-          </div>
+
+            <div className="mt-8 border-t border-white/[0.07] pt-8">
+              {savedCourseId ? (
+                <button
+                  type="button"
+                  onClick={openCourse}
+                  className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:scale-[1.02] hover:shadow-blue-500/30"
+                >
+                  Start Learning Now
+                  <ArrowRight size={17} className="transition-transform group-hover:translate-x-1" />
+                </button>
+              ) : errorMessage ? (
+                <button
+                  type="button"
+                  onClick={retryCreation}
+                  className="rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:scale-[1.02]"
+                >
+                  Try Again
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  suppressHydrationWarning
+                  className="cursor-not-allowed rounded-xl border border-white/10 bg-white/[0.04] px-6 py-3.5 font-semibold text-slate-400"
+                >
+                  Saving your course...
+                </button>
+              )}
+            </div>
+
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-col justify-center rounded-[28px] border border-white/10 bg-white/[0.035] p-6 backdrop-blur-xl"
+          >
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Today&apos;s Progress
+            </p>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.9 }}
+                className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500"
+              />
+            </div>
+            <p className="mt-2 text-sm text-slate-500">{progress}% Complete</p>
+
+            <div className="mt-6 flex items-center gap-2 text-cyan-300">
+              <CheckCircle2 size={18} />
+              <span className="text-sm font-semibold">Let&apos;s get started!</span>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 text-slate-500">
+              <Flame size={16} className="text-orange-400" />
+              <span className="text-xs">Streak resets when your first lesson is done</span>
+            </div>
+          </motion.div>
 
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -498,9 +564,14 @@ export default function Dashboard() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          Loading dashboard...
-        </div>
+        <main className="flex min-h-screen items-center justify-center bg-[#070A12] text-white">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg shadow-blue-500/20">
+              <BrainCircuit size={26} />
+            </div>
+            <p className="text-sm text-slate-400">Preparing your learning space...</p>
+          </div>
+        </main>
       }
     >
       <DashboardContent />
