@@ -52,8 +52,8 @@ function DashboardContent() {
       return;
     }
 
-    const creationKey = `course-created:${normalizedGoal}:${parsedDays}`;
-    const creationLockKey = `course-creating:${normalizedGoal}:${parsedDays}`;
+    const creationKey = `course-created:${normalizedGoal}:${validDays}`;
+    const creationLockKey = `course-creating:${normalizedGoal}:${validDays}`;
 
     // Already created in this browser session.
     const existingCourseId =
@@ -107,8 +107,8 @@ function DashboardContent() {
         const savedCourse = await saveCourse({
           topic: normalizedGoal,
           level: "Beginner",
-          target_days: parsedDays,
-          total_lessons: parsedDays,
+          target_days: validDays,
+          total_lessons: validDays,
           current_lesson: 1,
           completed_lessons: 0,
           progress: 0,
@@ -137,7 +137,7 @@ function DashboardContent() {
             },
             body: JSON.stringify({
               topic: normalizedGoal,
-              days: parsedDays,
+              days: validDays,
             }),
           }
         );
