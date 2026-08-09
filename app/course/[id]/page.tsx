@@ -109,6 +109,26 @@ export default function CoursePage() {
     }
   }, [authLoading, id, router, user]);
 
+  const nextLesson = useMemo(() => {
+    if (!course || lessons.length === 0) {
+      return null;
+    }
+
+    return (
+      lessons.find(
+        (lesson) =>
+          !lesson.completed &&
+          lesson.lesson_number >= course.current_lesson
+      ) ||
+      lessons.find((lesson) => !lesson.completed) ||
+      null
+    );
+  }, [course, lessons]);
+
+  const completedCount = lessons.filter(
+    (lesson) => lesson.completed
+  ).length;
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-[#070A12] text-white flex items-center justify-center">
@@ -139,26 +159,6 @@ export default function CoursePage() {
       </div>
     );
   }
-
-  const nextLesson = useMemo(() => {
-    if (!course || lessons.length === 0) {
-      return null;
-    }
-
-    return (
-      lessons.find(
-        (lesson) =>
-          !lesson.completed &&
-          lesson.lesson_number >= course.current_lesson
-      ) ||
-      lessons.find((lesson) => !lesson.completed) ||
-      null
-    );
-  }, [course, lessons]);
-
-  const completedCount = lessons.filter(
-    (lesson) => lesson.completed
-  ).length;
 
   if (loading) {
     return (
