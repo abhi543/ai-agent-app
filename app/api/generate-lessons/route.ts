@@ -69,28 +69,51 @@ function safeJsonParse(text: string) {
 
 export async function POST(req: Request) {
   try {
-    const { topic, days } = await req.json();
+    const { topic, level, dailyMinutes, style } = await req.json();
 
     const prompt = `
-You are an expert course creator.
+You are an expert curriculum designer creating a personalized learning journey.
 
-Create a ${days}-day learning roadmap for "${topic}".
+Learner profile:
+- Goal: "${topic}"
+- Current level: ${level}
+- Daily time available: ${dailyMinutes} minutes/day
+- Learning style: ${style} (Sprint = faster and more focused, fewer lessons and days;
+  Balanced = normal steady pace; Mastery = deeper learning with more practice,
+  more lessons and days)
 
-Return ONLY valid JSON.
+Design a complete course broken into exactly 4 stages, in this order:
+1. "Discover" — orientation and foundational concepts
+2. "Learn" — core skills and knowledge
+3. "Practice" — applied exercises and reinforcement
+4. "Master" — advanced application and synthesis
 
-Format:
+Decide the total number of lessons and the estimated number of days yourself,
+based on the learner's level, daily time, and learning style. A beginner needs
+more foundational lessons than an expert. Someone with less daily time needs
+more days to cover the same material. A Sprint style should produce a shorter,
+more compressed journey; a Mastery style should produce a longer, deeper one.
+
+Return ONLY valid JSON in this exact shape:
 
 {
-  "lessons": [
+  "estimated_days": 21,
+  "stages": [
     {
-      "lesson_number": 1,
-      "title": "Lesson title"
-    }
+      "name": "Discover",
+      "lessons": [
+        { "lesson_number": 1, "title": "Lesson title" }
+      ]
+    },
+    { "name": "Learn", "lessons": [ { "lesson_number": 2, "title": "..." } ] },
+    { "name": "Practice", "lessons": [ { "lesson_number": 3, "title": "..." } ] },
+    { "name": "Master", "lessons": [ { "lesson_number": 4, "title": "..." } ] }
   ]
 }
 
 Rules:
-- Exactly ${days} lessons
+- lesson_number must be sequential across ALL stages combined, starting at 1
+- Every stage must have at least 1 lesson
 - Each lesson should build on the previous one
 - No explanations
 - No markdown

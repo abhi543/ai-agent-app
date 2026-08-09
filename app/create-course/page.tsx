@@ -10,19 +10,30 @@ import {
   ArrowRight,
   BrainCircuit,
   CheckCircle2,
+  Compass,
+  Dumbbell,
   Flame,
+  GraduationCap,
   Sparkles,
   Target,
+  BookOpen,
 } from "lucide-react";
 import { getAuthenticatedUser } from "@/lib/supabase-auth";
 
 interface GeneratedLesson {
   lesson_number: number;
   title: string;
-  content: string;
 }
 
-interface LessonsPayload {
+interface GeneratedStage {
+  name: string;
+  lessons: GeneratedLesson[];
+}
+
+interface CoursePlanPayload {
+  estimated_days?: number;
+  stages?: GeneratedStage[];
+  // legacy shape support, in case the API ever falls back to it
   lessons?: GeneratedLesson[];
 }
 
@@ -48,11 +59,17 @@ const STYLE_OPTIONS: { value: Style; label: string; desc: string }[] = [
   { value: "Mastery", label: "Mastery", desc: "Deeper learning, more practice" },
 ];
 
-// --- Duration heuristic -----------------------------------------------
-// Placeholder logic for Phase 1: turns (level, daily time, style) into a
-// day count using simple multipliers, so the rest of the pipeline (which
-// already generates exactly one lesson per day) keeps working unchanged.
-// Phase 2 replaces this with a real AI-driven course/stage generator.
+const STAGE_ICONS: Record<string, typeof Compass> = {
+  Discover: Compass,
+  Learn: BookOpen,
+  Practice: Dumbbell,
+  Master: GraduationCap,
+};
+
+// --- Fallback duration heuristic ---------------------------------------
+// Used ONLY if the AI-generated plan comes back malformed. Turns
+// (level, daily time, style) into a single-stage, one-lesson-per-day
+// plan so the flow never dead-ends even if the AI call has a bad day.
 const LEVEL_BASE_DAYS: Record<Level, number> = {
   Beginner: 21,
   Intermediate: 14,
@@ -71,7 +88,54 @@ function estimateDays(level: Level, dailyMinutes: number, style: Style): number 
 
   return Math.max(3, Math.min(60, Math.round(raw)));
 }
+
+function fallbackPlan(level: Level, dailyMinutes: number, style: Style): {
+  estimatedDays: number;
+  stages: GeneratedStage[];
+} {
+  const days = estimateDays(level, dailyMinutes, style);
+  return {
+    estimatedDays: days,
+    stages: [
+      {
+        name: "Learn",
+        lessons: Array.from({ length: days }, (_, i) => ({
+          lesson_number: i + 1,
+          title: `Day ${i + 1}`,
+        })),
+      },
+    ],
+  };
+}
 // ------------------------------------------------------------------------
+
+function isValidPlan(
+  plan: CoursePlanPayload
+): plan is { estimated_days: number; stages: GeneratedStage[] } {
+  if (
+    typeof plan.estimated_days !== "number" ||
+    !Number.isFinite(plan.estimated_days) ||
+    plan.estimated_days < 1
+  ) {
+    return false;
+  }
+
+  if (!Array.isArray(plan.stages) || plan.stages.length === 0) {
+    return false;
+  }
+
+  return plan.stages.every(
+    (stage) =>
+      typeof stage.name === "string" &&
+      Array.isArray(stage.lessons) &&
+      stage.lessons.length > 0 &&
+      stage.lessons.every(
+        (lesson) =>
+          typeof lesson.lesson_number === "number" &&
+          typeof lesson.title === "string"
+      )
+  );
+}
 
 type WizardStep = "level" | "time" | "style" | "generating";
 
@@ -102,13 +166,11 @@ function DashboardContent() {
 
   const [savedCourseId, setSavedCourseId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [planDays, setPlanDays] = useState<number>(1);
+  const [planStages, setPlanStages] = useState<GeneratedStage[]>([]);
+  const [usedFallback, setUsedFallback] = useState(false);
 
-  const validDays =
-    level && dailyMinutes && style
-      ? estimateDays(level, dailyMinutes, style)
-      : 1;
-
-  const course = createCourse(normalizedGoal, validDays);
+  const course = createCourse(normalizedGoal, planDays);
 
   async function beginCourseCreation(
     finalLevel: Level,
@@ -122,8 +184,6 @@ function DashboardContent() {
       setErrorMessage("A valid learning goal is required.");
       return;
     }
-
-    const days = estimateDays(finalLevel, finalDailyMinutes, finalStyle);
 
     const creationKey = `course-created:${normalizedGoal}`;
     const creationLockKey = `course-creating:${normalizedGoal}`;
@@ -154,12 +214,65 @@ function DashboardContent() {
 
       console.log("Creating course for user:", user.id);
 
+      // Ask the AI to design the journey: it decides the duration itself
+      // and organizes lessons into the Discover / Learn / Practice /
+      // Master stages, based on the learner's level, time, and style.
+      const response = await fetch("/api/generate-lessons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: normalizedGoal,
+          level: finalLevel,
+          dailyMinutes: finalDailyMinutes,
+          style: finalStyle,
+        }),
+      });
+
+      let plan: { estimatedDays: number; stages: GeneratedStage[] };
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Lesson generation failed:", response.status, errorText);
+        console.warn("Falling back to the heuristic plan.");
+        plan = fallbackPlan(finalLevel, finalDailyMinutes, finalStyle);
+        setUsedFallback(true);
+      } else {
+        const rawText = await response.text();
+        let parsed: CoursePlanPayload;
+
+        try {
+          parsed = JSON.parse(rawText) as CoursePlanPayload;
+        } catch {
+          console.error("Invalid lesson response:", rawText);
+          parsed = {};
+        }
+
+        if (isValidPlan(parsed)) {
+          plan = { estimatedDays: parsed.estimated_days, stages: parsed.stages };
+        } else if (Array.isArray(parsed.lessons) && parsed.lessons.length > 0) {
+          // Legacy flat-array shape — wrap it as a single stage.
+          plan = {
+            estimatedDays: parsed.lessons.length,
+            stages: [{ name: "Learn", lessons: parsed.lessons }],
+          };
+        } else {
+          console.warn("AI plan was malformed. Falling back to the heuristic plan.");
+          plan = fallbackPlan(finalLevel, finalDailyMinutes, finalStyle);
+          setUsedFallback(true);
+        }
+      }
+
+      setPlanDays(plan.estimatedDays);
+      setPlanStages(plan.stages);
+
+      const flattenedLessons = plan.stages.flatMap((stage) => stage.lessons);
+
       // course-db.ts automatically attaches user_id.
       const savedCourseRecord = await saveCourse({
         topic: normalizedGoal,
         level: finalLevel,
-        target_days: days,
-        total_lessons: days,
+        target_days: plan.estimatedDays,
+        total_lessons: flattenedLessons.length,
         current_lesson: 1,
         completed_lessons: 0,
         progress: 0,
@@ -170,44 +283,15 @@ function DashboardContent() {
       sessionStorage.setItem(creationKey, savedCourseRecord.id);
       setSavedCourseId(savedCourseRecord.id);
 
-      const response = await fetch("/api/generate-lessons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: normalizedGoal,
-          days,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Lesson generation failed:", response.status, errorText);
-        throw new Error("Unable to generate lessons. Please try again.");
-      }
-
-      const lessonsText = await response.text();
-
-      let lessons: LessonsPayload;
-      try {
-        lessons = JSON.parse(lessonsText) as LessonsPayload;
-      } catch {
-        console.error("Invalid lesson response:", lessonsText);
-        throw new Error("Unable to parse the generated lessons.");
-      }
-
-      const lessonItems = lessons?.lessons;
-
-      if (!Array.isArray(lessonItems)) {
-        throw new Error("The lesson generator returned an invalid response.");
-      }
-
-      // lesson-db.ts automatically attaches user_id.
+      // lesson-db.ts automatically attaches user_id. Lesson content is
+      // generated on demand later (see /api/generate-lesson) when the
+      // learner opens a specific lesson — not here.
       await saveLessons(
-        lessonItems.map((lesson: GeneratedLesson) => ({
+        flattenedLessons.map((lesson) => ({
           course_id: savedCourseRecord.id,
           lesson_number: lesson.lesson_number,
           title: lesson.title,
-          content: lesson.content,
+          content: "",
           completed: false,
         }))
       );
@@ -438,10 +522,10 @@ function DashboardContent() {
             <div>
               <h1 className="mb-2 flex items-center gap-2 text-3xl font-bold sm:text-4xl">
                 <Target size={28} className="text-cyan-400 shrink-0" />
-                Your Learning Journey Begins
+                Your Personalized Journey
               </h1>
               <p className="text-slate-400">
-                Your personalized AI tutor has prepared your learning plan.
+                Your AI tutor designed this journey around your goal, level, and pace.
               </p>
             </div>
           </div>
@@ -470,20 +554,60 @@ function DashboardContent() {
             <div className="mt-6 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Duration
+                  Estimated duration
                 </p>
                 <p className="mt-2 text-2xl font-bold">
-                  {course.targetDays}
+                  {planDays}
                   <span className="text-sm font-normal text-slate-500"> days</span>
                 </p>
               </div>
               <div className="rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Level
+                  Lessons
                 </p>
-                <p className="mt-2 text-2xl font-bold">{level}</p>
+                <p className="mt-2 text-2xl font-bold">
+                  {planStages.reduce((n, s) => n + s.lessons.length, 0)}
+                </p>
               </div>
             </div>
+
+            {planStages.length > 0 && (
+              <div className="mt-6">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Your journey
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {planStages.map((stage, i) => {
+                    const Icon = STAGE_ICONS[stage.name] ?? Sparkles;
+                    return (
+                      <div
+                        key={`${stage.name}-${i}`}
+                        className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-3"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 text-cyan-300">
+                          <Icon size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">
+                            Stage {i + 1} — {stage.name}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {stage.lessons.length} lesson{stage.lessons.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {usedFallback && !errorMessage && (
+              <p className="mt-4 text-xs text-amber-400/80">
+                Your AI tutor was briefly unavailable, so this plan uses a simplified journey.
+                You can try again below for a fully personalized one.
+              </p>
+            )}
 
             {errorMessage && (
               <div className="mt-6 rounded-2xl border border-red-400/20 bg-red-400/[0.06] p-5">
@@ -517,7 +641,7 @@ function DashboardContent() {
                   suppressHydrationWarning
                   className="cursor-not-allowed rounded-xl border border-white/10 bg-white/[0.04] px-6 py-3.5 font-semibold text-slate-400"
                 >
-                  Saving your course...
+                  Designing your journey...
                 </button>
               )}
             </div>
