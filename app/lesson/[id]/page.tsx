@@ -26,6 +26,7 @@ interface LessonRecord {
   completed: boolean;
   course_id: string;
   user_id: string;
+  stage?: string;
 }
 
 interface CourseRecord {

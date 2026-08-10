@@ -265,7 +265,11 @@ function DashboardContent() {
       setPlanDays(plan.estimatedDays);
       setPlanStages(plan.stages);
 
-      const flattenedLessons = plan.stages.flatMap((stage) => stage.lessons);
+      // Keep each lesson's stage name attached as we flatten, so it can
+      // be persisted to the database (Phase 3) instead of being lost.
+      const flattenedLessons = plan.stages.flatMap((stage) =>
+        stage.lessons.map((lesson) => ({ ...lesson, stage: stage.name }))
+      );
 
       // course-db.ts automatically attaches user_id.
       const savedCourseRecord = await saveCourse({
@@ -293,6 +297,7 @@ function DashboardContent() {
           title: lesson.title,
           content: "",
           completed: false,
+          stage: lesson.stage,
         }))
       );
 

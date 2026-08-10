@@ -34,6 +34,7 @@ interface LessonRecord {
   lesson_number: number;
   title: string;
   completed: boolean;
+  stage?: string;
 }
 
 export default function CoursePage() {
