@@ -31,6 +31,12 @@ interface CourseRecord {
   created_at: string | null;
 }
 
+interface TodayLesson {
+  title: string;
+  stage: string;
+  lesson_number: number;
+}
+
 interface ActivityItem {
   icon: "course" | "lesson";
   title: string;
@@ -56,6 +62,7 @@ export default function DashboardPage() {
 
   const [userName, setUserName] = useState("Learner");
   const [course, setCourse] = useState<CourseRecord | null>(null);
+  const [todayLesson, setTodayLesson] = useState<TodayLesson | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   const [stats, setStats] = useState<DashboardStats>({
@@ -127,6 +134,33 @@ console.log("Latest course:", latestCourse);
 console.log("Latest Course:", latestCourse);
 
 setCourse(latestCourse);
+
+// Today's actual lesson (real title + stage), instead of a bare
+// lesson number — first try the lesson matching current_lesson,
+// falling back to the first not-yet-completed lesson.
+if (latestCourse) {
+  const { data: exactLesson } = await supabase
+    .from("lessons")
+    .select("title, stage, lesson_number")
+    .eq("course_id", latestCourse.id)
+    .eq("lesson_number", latestCourse.current_lesson)
+    .maybeSingle();
+
+  if (exactLesson) {
+    setTodayLesson(exactLesson);
+  } else {
+    const { data: nextLesson } = await supabase
+      .from("lessons")
+      .select("title, stage, lesson_number")
+      .eq("course_id", latestCourse.id)
+      .eq("completed", false)
+      .order("lesson_number", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    setTodayLesson(nextLesson ?? null);
+  }
+}
 
         // Total courses for this user
         console.log("STEP 1");
@@ -472,6 +506,12 @@ setCourse(latestCourse);
                       {course.level}
                     </span>
 
+                    {todayLesson?.stage && (
+                      <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-300">
+                        {todayLesson.stage}
+                      </span>
+                    )}
+
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-slate-400">
                       Lesson {course.current_lesson}
                     </span>
@@ -481,6 +521,13 @@ setCourse(latestCourse);
                   <h2 className="mt-4 text-3xl font-bold">
                     {course.topic}
                   </h2>
+
+                  {todayLesson && (
+                    <p className="mt-2 flex items-center gap-2 text-sm text-slate-300">
+                      <span className="text-slate-500">Today&apos;s lesson:</span>
+                      <span className="font-semibold text-white">{todayLesson.title}</span>
+                    </p>
+                  )}
 
                   <p className="mt-2 text-sm text-slate-400">
                     {course.completed_lessons} of{" "}
