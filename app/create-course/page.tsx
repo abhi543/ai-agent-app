@@ -275,6 +275,7 @@ function DashboardContent() {
       const savedCourseRecord = await saveCourse({
         topic: normalizedGoal,
         level: finalLevel,
+        style: finalStyle,
         target_days: plan.estimatedDays,
         total_lessons: flattenedLessons.length,
         current_lesson: 1,

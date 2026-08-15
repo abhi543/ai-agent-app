@@ -32,6 +32,8 @@ interface LessonRecord {
 interface CourseRecord {
   id: string;
   topic: string;
+  level: string;
+  style?: string;
   progress: number;
   completed_lessons: number;
   total_lessons: number;
@@ -200,6 +202,8 @@ export default function LessonPage() {
           body: JSON.stringify({
             topic: courseData.topic,
             title: currentLesson.title,
+            level: courseData.level,
+            style: courseData.style,
           }),
         });
 

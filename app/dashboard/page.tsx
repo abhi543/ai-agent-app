@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import {
   ArrowRight,
+  AlertTriangle,
   BookOpen,
   BrainCircuit,
   CheckCircle2,
@@ -38,6 +39,12 @@ interface TodayLesson {
   lesson_number: number;
 }
 
+interface MistakeItem {
+  question: string;
+  user_answer: string;
+  correct_answer: string;
+}
+
 interface ActivityItem {
   icon: "course" | "lesson";
   title: string;
@@ -65,6 +72,7 @@ export default function DashboardPage() {
   const [course, setCourse] = useState<CourseRecord | null>(null);
   const [todayLesson, setTodayLesson] = useState<TodayLesson | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [weakAreas, setWeakAreas] = useState<MistakeItem[]>([]);
 
   const [stats, setStats] = useState<DashboardStats>({
     courses: 0,
@@ -264,6 +272,20 @@ if (latestCourse) {
         });
 
         setActivities(activityList);
+
+        // Weak areas — most recent quiz mistakes for this learner.
+        const { data: recentMistakes, error: mistakesError } = await supabase
+          .from("mistakes")
+          .select("question, user_answer, correct_answer")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(5);
+
+        if (mistakesError) {
+          console.error("Weak areas error:", mistakesError);
+        }
+
+        setWeakAreas((recentMistakes || []) as MistakeItem[]);
       } catch (error) {
         console.error(
           "Dashboard loading error:",
@@ -856,6 +878,77 @@ if (latestCourse) {
                   Your learning activity will appear here.
                 </p>
 
+              </div>
+
+            )}
+
+          </div>
+
+        </section>
+
+        {/* Weak Areas */}
+
+        <section className="mt-10">
+
+          <div className="mb-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Weak areas
+            </p>
+
+            <h2 className="mt-1 text-xl font-bold">
+              Questions worth revisiting
+            </h2>
+          </div>
+
+          <div className="rounded-3xl border border-white/[0.07] bg-white/[0.035] p-5 backdrop-blur-xl">
+
+            {weakAreas.length > 0 ? (
+
+              <div className="space-y-2">
+
+                {weakAreas.map((mistake, index) => (
+
+                  <motion.div
+                    key={`${mistake.question}-${index}`}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="rounded-2xl px-4 py-4 transition hover:bg-white/[0.03]"
+                  >
+
+                    <div className="flex items-start gap-4">
+
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04]">
+                        <AlertTriangle size={18} className="text-amber-400" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {mistake.question}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          You answered{" "}
+                          <span className="text-red-400">{mistake.user_answer}</span>
+                          {" — correct: "}
+                          <span className="text-emerald-400">{mistake.correct_answer}</span>
+                        </p>
+                      </div>
+
+                    </div>
+
+                  </motion.div>
+
+                ))}
+
+              </div>
+
+            ) : (
+
+              <div className="py-8 text-center">
+                <Sparkles size={24} className="mx-auto text-slate-600" />
+                <p className="mt-3 text-sm text-slate-500">
+                  No mistakes yet — quiz answers you get wrong will show up here.
+                </p>
               </div>
 
             )}
