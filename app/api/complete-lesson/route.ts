@@ -73,6 +73,17 @@ export async function POST(req: Request) {
     }
 
     // ==========================
+    // Find next lesson
+    // ==========================
+
+    const { data: nextLesson } = await supabase
+      .from("lessons")
+      .select("id, lesson_number")
+      .eq("course_id", lesson.course_id)
+      .eq("lesson_number", lesson.lesson_number + 1)
+      .single();
+
+    // ==========================
     // Update Course
     // ==========================
 
@@ -81,6 +92,9 @@ export async function POST(req: Request) {
       progress,
       streak,
       last_study_date: today,
+      // Advance to the next lesson so the dashboard's "today's lesson"
+      // actually moves forward instead of staying on lesson 1 forever.
+      current_lesson: nextLesson?.lesson_number ?? lesson.lesson_number,
     };
 
     let generatedCertificateId: string | null = course.certificate_id || null;
@@ -103,17 +117,6 @@ export async function POST(req: Request) {
       .from("courses")
       .update(updates)
       .eq("id", lesson.course_id);
-
-    // ==========================
-    // Find next lesson
-    // ==========================
-
-    const { data: nextLesson } = await supabase
-      .from("lessons")
-      .select("id")
-      .eq("course_id", lesson.course_id)
-      .eq("lesson_number", lesson.lesson_number + 1)
-      .single();
 
     const isCourseComplete = progress === 100;
 

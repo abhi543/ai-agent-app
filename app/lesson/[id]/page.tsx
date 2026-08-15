@@ -429,6 +429,8 @@ export default function LessonPage() {
                 topic={course.topic}
                 lessonTitle={lesson.title}
                 lessonContent={lesson.content}
+                courseId={course.id}
+                lessonId={lesson.id}
                 quiz={quiz}
                 quizError={quizError}
                 onQuizGenerated={(newQuiz) => {

@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import { saveMistake } from "@/lib/mistake-db";
 
 interface QuizQuestion {
   question: string;
@@ -25,6 +26,8 @@ interface QuizPanelProps {
   topic: string;
   lessonTitle: string;
   lessonContent: string;
+  courseId: string;
+  lessonId: string;
   quiz: QuizPayload | null;
   quizError: string | null;
   onQuizGenerated: (quiz: QuizPayload) => void;
@@ -36,6 +39,8 @@ export default function QuizPanel({
   topic,
   lessonTitle,
   lessonContent,
+  courseId,
+  lessonId,
   quiz,
   quizError,
   onQuizGenerated,
@@ -146,9 +151,22 @@ export default function QuizPanel({
 
           const data = await response.json();
 
-          explanationList.push(
-            data?.explanation || "Review this question and try again."
-          );
+          const explanationText =
+            data?.explanation || "Review this question and try again.";
+
+          explanationList.push(explanationText);
+
+          // Persist this mistake so weak areas / past mistakes can be
+          // surfaced later — failure here should never block the quiz.
+          void saveMistake({
+            course_id: courseId,
+            lesson_id: lessonId,
+            question: question.question,
+            options: question.options,
+            correct_answer: question.options[question.answer],
+            user_answer: question.options[selectedAnswers[index]],
+            explanation: explanationText,
+          });
         }
       }
 
