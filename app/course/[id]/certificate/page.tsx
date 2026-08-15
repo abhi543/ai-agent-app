@@ -3,14 +3,23 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getAuthenticatedUser } from "@/lib/supabase-auth";
 
 export default function CertificatePage() {
   const { id } = useParams<{ id: string }>();
   const [course, setCourse] = useState<any>(null);
+  const [learnerName, setLearnerName] = useState("Learner");
 
   useEffect(() => {
     async function loadCourse() {
       if (!id) return;
+
+      const user = await getAuthenticatedUser();
+
+      if (user) {
+        const fullName = user.user_metadata?.full_name?.trim();
+        setLearnerName(fullName || user.email || "Learner");
+      }
 
       const { data, error } = await supabase
         .from("courses")
@@ -60,7 +69,7 @@ export default function CertificatePage() {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(28);
-    doc.text("Learner", pageWidth / 2, 250, { align: "center" });
+    doc.text(learnerName, pageWidth / 2, 250, { align: "center" });
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(16);
@@ -109,7 +118,7 @@ export default function CertificatePage() {
           </p>
 
           <h2 className="text-5xl font-bold mt-6">
-            Learner
+            {learnerName}
           </h2>
 
           <p className="mt-10 text-2xl">

@@ -7,6 +7,7 @@ import {
   BrainCircuit,
   CheckCircle2,
   Flame,
+  History,
   LogOut,
   Plus,
   Sparkles,
@@ -402,9 +403,18 @@ if (latestCourse) {
 
             <button
               type="button"
+              onClick={() => router.push("/history")}
+              className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
+              title="Learning history"
+            >
+              <History size={17} />
+            </button>
+
+            <button
+              type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="ml-2 rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-slate-400 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
+              className="rounded-xl border border-white/10 bg-white/[0.04] p-2.5 text-slate-400 transition hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
               title="Sign out"
             >
               <LogOut size={17} />
