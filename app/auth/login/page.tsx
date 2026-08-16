@@ -362,6 +362,13 @@ export default function LoginPage() {
                         Password
                       </label>
 
+                      <Link
+                        href="/auth/forgot-password"
+                        className="text-xs font-medium text-blue-400 transition hover:text-cyan-300"
+                      >
+                        Forgot password?
+                      </Link>
+
                     </div>
 
                     <div className="group flex items-center rounded-2xl border border-white/10 bg-white/[0.04] px-4 transition focus-within:border-blue-500/50 focus-within:bg-white/[0.06]">
