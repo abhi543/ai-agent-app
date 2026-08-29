@@ -52,6 +52,13 @@ export default function LessonContent({
             {title}
           </h1>
 
+          <a
+            href="#quiz-section"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-cyan-400 transition hover:text-cyan-300"
+          >
+            Skip to quiz ↓
+          </a>
+
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between text-xs text-slate-400">
               <span>Learning progress</span>

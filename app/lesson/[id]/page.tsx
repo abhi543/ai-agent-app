@@ -433,26 +433,28 @@ export default function LessonPage() {
           <div className="bg-slate-950 px-6 pb-10 lg:px-10">
             <div className="mx-auto max-w-4xl">
 
-              <QuizPanel
-                topic={course.topic}
-                lessonTitle={lesson.title}
-                lessonContent={lesson.content}
-                courseId={course.id}
-                lessonId={lesson.id}
-                quiz={quiz}
-                quizError={quizError}
-                onQuizGenerated={(newQuiz) => {
-                  setQuiz(newQuiz);
-                  setQuizError(null);
-                }}
-                onQuizError={setQuizError}
-                onPassed={(score, total) => {
-                  setQuizPassed(true);
-                  setCompletionMessage(
-                    `🎉 Quiz passed — ${score}/${total}. You can now complete the lesson.`
-                  );
-                }}
-              />
+              <div id="quiz-section" className="scroll-mt-24">
+                <QuizPanel
+                  topic={course.topic}
+                  lessonTitle={lesson.title}
+                  lessonContent={lesson.content}
+                  courseId={course.id}
+                  lessonId={lesson.id}
+                  quiz={quiz}
+                  quizError={quizError}
+                  onQuizGenerated={(newQuiz) => {
+                    setQuiz(newQuiz);
+                    setQuizError(null);
+                  }}
+                  onQuizError={setQuizError}
+                  onPassed={(score, total) => {
+                    setQuizPassed(true);
+                    setCompletionMessage(
+                      `🎉 Quiz passed — ${score}/${total}. You can now complete the lesson.`
+                    );
+                  }}
+                />
+              </div>
 
               <CompletionPanel
                 completed={lesson.completed}
