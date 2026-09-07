@@ -5,8 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   BrainCircuit,
   Send,
-  Sparkles,
-  Lightbulb,
   MessageCircle,
   Loader2,
 } from "lucide-react";
@@ -22,21 +20,6 @@ interface TutorPanelProps {
   messages?: TutorMessage[];
   onMessagesChange?: (messages: TutorMessage[]) => void;
 }
-
-const suggestions = [
-  {
-    label: "Explain simply",
-    icon: Lightbulb,
-  },
-  {
-    label: "Give me an example",
-    icon: Sparkles,
-  },
-  {
-    label: "Test my understanding",
-    icon: BrainCircuit,
-  },
-];
 
 export default function TutorPanel({
   lessonId,
@@ -133,34 +116,33 @@ export default function TutorPanel({
 
       {/* Header */}
 
-      <div className="border-b border-slate-800 p-5">
+      <div className="border-b border-slate-800 p-4">
 
         <div className="flex items-center gap-3">
 
-          <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg shadow-blue-500/20">
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg shadow-blue-500/20">
 
-            <BrainCircuit size={22} />
-
-            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-400 ring-4 ring-slate-900" />
+            <BrainCircuit size={20} />
 
           </div>
 
-          <div>
-            <h2 className="font-bold text-white">
-              AI Mentor
-            </h2>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-white">
+                AI Mentor
+              </h2>
+              <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Online
+              </span>
+            </div>
 
-            <p className="text-xs text-emerald-400">
-              Online • Context aware
+            <p className="truncate text-xs text-slate-500">
+              Ask anything about this lesson
             </p>
           </div>
 
         </div>
-
-        <p className="mt-4 text-sm leading-6 text-slate-400">
-          Ask questions about this lesson, request examples, or test your
-          understanding without leaving the learning workspace.
-        </p>
 
       </div>
 
@@ -259,41 +241,9 @@ export default function TutorPanel({
 
       </div>
 
-      {/* Suggestions */}
-
-      <div className="border-t border-slate-800 px-5 pt-4">
-
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Quick prompts
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-
-          {suggestions.map((suggestion) => {
-
-            const Icon = suggestion.icon;
-
-            return (
-              <button
-                key={suggestion.label}
-                type="button"
-                disabled={loading}
-                onClick={() => askTutor(suggestion.label)}
-                className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800/70 px-3 py-2 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Icon size={14} />
-                {suggestion.label}
-              </button>
-            );
-          })}
-
-        </div>
-
-      </div>
-
       {/* Input */}
 
-      <div className="p-5">
+      <div className="p-4">
 
         <div className="rounded-2xl border border-slate-700 bg-slate-800/80 p-3 focus-within:border-blue-500/60">
 

@@ -391,7 +391,7 @@ export default function LessonPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen overflow-x-hidden bg-slate-950 text-white">
 
       <Header
         courseTitle={course.topic}
@@ -401,11 +401,11 @@ export default function LessonPage() {
         duration={15}
       />
 
-      <div className="grid min-h-[calc(100vh-5rem)] grid-cols-12">
+      <div className="grid min-h-[calc(100vh-5rem)] min-w-0 grid-cols-12">
 
         {/* LEFT SIDEBAR */}
 
-        <div className="col-span-12 hidden lg:col-span-2 lg:block">
+        <div className="col-span-12 hidden min-w-0 xl:col-span-2 xl:block">
           <div className="sticky top-20 h-[calc(100vh-5rem)]">
             <Sidebar
               courseTitle={course.topic}
@@ -423,7 +423,7 @@ export default function LessonPage() {
 
         {/* CENTER */}
 
-        <div className="col-span-12 min-w-0 lg:col-span-7">
+        <div className="col-span-12 min-w-0 lg:col-span-8 xl:col-span-6">
           <LessonContent
             lessonNumber={lesson.lesson_number}
             title={lesson.title}
@@ -469,7 +469,7 @@ export default function LessonPage() {
 
         {/* RIGHT AI TUTOR */}
 
-        <div className="col-span-12 hidden lg:col-span-3 lg:block">
+        <div className="col-span-12 min-w-0 lg:col-span-4 xl:col-span-4">
           <div className="sticky top-20 h-[calc(100vh-5rem)]">
             <TutorPanel
               lessonId={lesson.id}
