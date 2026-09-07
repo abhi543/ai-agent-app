@@ -1,35 +1,17 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { askGroq, type GroqMessage } from "@/lib/ai";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader?.split(" ")[1];
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json(
-        { error: "Unauthorized. Missing authentication token." },
-        { status: 401 }
-      );
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-      auth: { persistSession: false },
-    });
-
-    // Verify token and get user context
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized. Invalid token." },
+        { error: "Authentication required." },
         { status: 401 }
       );
     }
@@ -43,21 +25,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Type casting logic for lessonId (handles numeric/bigint primary keys)
-    let parsedLessonId: any = lessonId;
-    if (
-      typeof lessonId === "string" &&
-      !isNaN(Number(lessonId)) &&
-      !lessonId.includes("-")
-    ) {
-      parsedLessonId = Number(lessonId);
-    }
-
     // Get current lesson
-    const { data: lesson, error: lessonError } = await supabaseClient
+    const { data: lesson, error: lessonError } = await supabase
       .from("lessons")
       .select("*")
-      .eq("id", parsedLessonId)
+      .eq("id", lessonId)
+      .eq("user_id", user.id)
       .single();
 
     if (lessonError || !lesson) {
@@ -68,30 +41,32 @@ export async function POST(req: Request) {
     }
 
     // Save user's message
-    await supabaseClient.from("lesson_messages").insert({
-      lesson_id: parsedLessonId,
+    await supabase.from("lesson_messages").insert({
+      lesson_id: lessonId,
+      user_id: user.id,
       role: "user",
       message,
-      user_id: user.id, // Explicitly associate with the authenticated user
     });
 
     // Load previous conversation
-    const { data: history } = await supabaseClient
+    const { data: history } = await supabase
       .from("lesson_messages")
       .select("role, message")
-      .eq("lesson_id", parsedLessonId)
-      .eq("user_id", user.id) // Filter by user_id for isolation
+      .eq("lesson_id", lessonId)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
     // Keep only the latest 20 messages
     const recentHistory = (history || []).slice(-20);
 
     // Build conversation for Groq
-    const messages: Array<{ role: string; content: string }> = [
+    const messages: GroqMessage[] = [
       {
         role: "system",
         content: `
-You are a friendly, knowledgeable AI tutor helping a student with this lesson.
+You are an expert AI teacher.
+
+You MUST answer ONLY using the lesson below.
 
 Lesson Title:
 ${lesson.title}
@@ -99,20 +74,12 @@ ${lesson.title}
 Lesson Content:
 ${lesson.content}
 
-Guidelines:
-- Ground your answers in this lesson whenever it's relevant.
-- You may also use your own general knowledge to explain things more
-  clearly, give additional examples, answer natural follow-up questions,
-  or clarify related concepts the student asks about — even if they go
-  a bit beyond exactly what's written above. A good tutor doesn't refuse
-  a reasonable question just because the lesson text doesn't cover it
-  word-for-word.
-- Only gently redirect if a question is genuinely unrelated to this
-  lesson or course altogether — for example: "That's a bit outside this
-  lesson — want me to explain ${lesson.title} instead?"
-- Keep answers simple, clear, and encouraging.
-- Don't state made-up facts with false confidence — if you're unsure,
-  say so.
+If the lesson does not contain the answer, say:
+
+"I don't think this lesson covers that yet."
+
+Never invent information.
+Always explain simply.
 `,
       },
     ];
@@ -125,42 +92,16 @@ Guidelines:
       });
     });
 
-    // Call Groq
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          temperature: 0.5,
-          messages,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-
-      return NextResponse.json(
-        { error },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-
-    const reply = data.choices[0].message.content;
+    const reply = await askGroq(messages, {
+      temperature: 0.5,
+    });
 
     // Save AI reply
-    await supabaseClient.from("lesson_messages").insert({
-      lesson_id: parsedLessonId,
+    await supabase.from("lesson_messages").insert({
+      lesson_id: lessonId,
+      user_id: user.id,
       role: "assistant",
       message: reply,
-      user_id: user.id, // Explicitly associate with the authenticated user
     });
 
     return NextResponse.json({

@@ -7,7 +7,6 @@ interface LessonInsert {
   title: string;
   content: string;
   completed: boolean;
-  stage: string;
 }
 
 export async function saveLessons(lessons: LessonInsert[]) {

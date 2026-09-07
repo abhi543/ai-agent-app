@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BrainCircuit, Loader2 } from "lucide-react";
+import { useElapsedSeconds } from "@/lib/use-elapsed-seconds";
 
 interface LoadingProps {
   message?: string;
@@ -10,6 +11,12 @@ interface LoadingProps {
 export default function Loading({
   message = "Preparing your lesson...",
 }: LoadingProps) {
+  const elapsedSeconds = useElapsedSeconds(true);
+  const waitingMessage =
+    elapsedSeconds >= 12
+      ? "Still working on it. Your lesson is on the way."
+      : "Just a moment...";
+
   return (
     <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-6">
       <motion.div
@@ -29,10 +36,14 @@ export default function Loading({
           {message}
         </p>
 
-        <div className="mt-6 flex items-center justify-center gap-2 text-cyan-400">
+        <div
+          className="mt-6 flex items-center justify-center gap-2 text-cyan-400"
+          role="status"
+          aria-live="polite"
+        >
           <Loader2 size={18} className="animate-spin" />
           <span className="text-sm">
-            Just a moment...
+            {waitingMessage}
           </span>
         </div>
       </motion.div>

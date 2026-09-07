@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BrainCircuit,
@@ -11,6 +10,7 @@ import {
   MessageCircle,
   Loader2,
 } from "lucide-react";
+import { useElapsedSeconds } from "@/lib/use-elapsed-seconds";
 
 interface TutorMessage {
   role: "user" | "assistant";
@@ -45,6 +45,7 @@ export default function TutorPanel({
 }: TutorPanelProps) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const elapsedSeconds = useElapsedSeconds(loading);
 
   async function askTutor(message?: string) {
     const text = (message ?? question).trim();
@@ -64,14 +65,10 @@ export default function TutorPanel({
     setQuestion("");
 
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-
       const response = await fetch("/api/lesson-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           lessonId,
@@ -163,8 +160,7 @@ export default function TutorPanel({
             </div>
 
             <p className="text-sm leading-6 text-slate-400">
-              I'm here while you study. Ask me to explain something differently,
-              give you an analogy, or create a practice question.
+              {"I'm here while you study. Ask me to explain something differently, give you an analogy, or create a practice question."}
             </p>
 
           </motion.div>
@@ -210,12 +206,18 @@ export default function TutorPanel({
                 className="mr-10 rounded-2xl border border-slate-700 bg-slate-800 p-4"
               >
 
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <div
+                  className="flex items-center gap-2 text-slate-400 text-sm"
+                  role="status"
+                  aria-live="polite"
+                >
                   <Loader2
                     size={16}
                     className="animate-spin"
                   />
-                  AI Mentor is thinking...
+                  {elapsedSeconds >= 8
+                    ? "Still working on your answer..."
+                    : "AI Mentor is thinking..."}
                 </div>
 
               </motion.div>

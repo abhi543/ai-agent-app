@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { askGroq, parseModelJson } from "@/lib/ai";
 
 export async function POST(req: Request) {
   try {
@@ -67,61 +68,20 @@ Rules:
 - JSON ONLY
 `;
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
+    const content = await askGroq(
+      [
+        {
+          role: "user",
+          content: prompt,
         },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          temperature: 1,
-          top_p: 0.95,
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-        }),
+      ],
+      {
+        temperature: 1,
+        top_p: 0.95,
       }
     );
 
-    const data = await response.json();
-    const rawContent = data?.choices?.[0]?.message?.content;
-
-    const normalizeJson = (text: string) => {
-      if (!text) return text;
-      return text
-        .trim()
-        .replace(/^```(?:json)?\s*/i, "")
-        .replace(/\s*```$/i, "")
-        .trim();
-    };
-
-    const parseJson = (text: string) => {
-      try {
-        return JSON.parse(text);
-      } catch {
-        const normalized = normalizeJson(text);
-
-        try {
-          return JSON.parse(normalized);
-        } catch {
-          const match = normalized.match(/(\{[\s\S]*\})/);
-
-          if (match) {
-            return JSON.parse(match[1]);
-          }
-
-          throw new Error("Invalid JSON");
-        }
-      }
-    };
-
-    const quiz = parseJson(rawContent);
+    const quiz = parseModelJson(content);
 
     if (!quiz?.questions || !Array.isArray(quiz.questions)) {
       throw new Error("Invalid quiz.");

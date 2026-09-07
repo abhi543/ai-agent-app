@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { askGroq } from "@/lib/ai";
 
 export async function POST(req: Request) {
   try {
@@ -43,31 +44,20 @@ Real-world example:
 Keep it under 200 words.
 `;
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
+    const explanation = await askGroq(
+      [
+        {
+          role: "user",
+          content: prompt,
         },
-        body: JSON.stringify({
-          model: "openai/gpt-oss-120b",
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          temperature: 0.5,
-        }),
+      ],
+      {
+        temperature: 0.5,
       }
     );
 
-    const data = await response.json();
-
     return NextResponse.json({
-      explanation: data.choices[0].message.content,
+      explanation,
     });
 
   } catch (err) {

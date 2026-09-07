@@ -1,46 +1,30 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader?.split(" ")[1];
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-    const supabaseClient = token
-      ? createClient(supabaseUrl, supabaseAnonKey, {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-          auth: { persistSession: false },
-        })
-      : createClient(supabaseUrl, supabaseAnonKey, {
-          auth: { persistSession: false },
-        });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required." },
+        { status: 401 }
+      );
+    }
 
     const { lessonId } = await req.json();
 
-    // Type casting logic for lessonId (handles numeric/bigint primary keys)
-    let parsedLessonId: any = lessonId;
-    if (
-      typeof lessonId === "string" &&
-      !isNaN(Number(lessonId)) &&
-      !lessonId.includes("-")
-    ) {
-      parsedLessonId = Number(lessonId);
-    }
-
     // Mark lesson complete
-    const { data: lesson, error } = await supabaseClient
+    const { data: lesson, error } = await supabase
       .from("lessons")
       .update({
         completed: true,
       })
-      .eq("id", parsedLessonId)
+      .eq("id", lessonId)
+      .eq("user_id", user.id)
       .select()
       .single();
 
@@ -48,22 +32,24 @@ export async function POST(req: Request) {
     if (!lesson) throw new Error("Lesson not found.");
 
     // Count completed lessons
-    const { count: completedCount } = await supabaseClient
+    const { count: completedCount } = await supabase
       .from("lessons")
       .select("*", {
         count: "exact",
         head: true,
       })
       .eq("course_id", lesson.course_id)
+      .eq("user_id", user.id)
       .eq("completed", true);
 
     // Get course details
-    const { data: course } = await supabaseClient
+    const { data: course } = await supabase
       .from("courses")
       .select(
         "id,total_lessons,streak,last_study_date,certificate_id"
       )
       .eq("id", lesson.course_id)
+      .eq("user_id", user.id)
       .single();
 
     if (!course) throw new Error("Course not found.");
@@ -102,26 +88,21 @@ export async function POST(req: Request) {
     }
 
     // ==========================
-    // Find next lesson
-    // ==========================
-
-    const { data: nextLesson } = await supabaseClient
-      .from("lessons")
-      .select("id, lesson_number")
-      .eq("course_id", lesson.course_id)
-      .eq("lesson_number", lesson.lesson_number + 1)
-      .maybeSingle();
-
-    // ==========================
     // Update Course
     // ==========================
 
-    const updates: any = {
+    const updates: {
+      completed_lessons: number | null;
+      progress: number;
+      streak: number;
+      last_study_date: string;
+      completed_at?: string;
+      certificate_id?: string | null;
+    } = {
       completed_lessons: completedCount,
       progress,
       streak,
       last_study_date: today,
-      current_lesson: nextLesson?.lesson_number ?? lesson.lesson_number,
     };
 
     let generatedCertificateId: string | null = course.certificate_id || null;
@@ -140,10 +121,23 @@ export async function POST(req: Request) {
       updates.certificate_id = generatedCertificateId;
     }
 
-    await supabaseClient
+    await supabase
       .from("courses")
       .update(updates)
-      .eq("id", lesson.course_id);
+      .eq("id", lesson.course_id)
+      .eq("user_id", user.id);
+
+    // ==========================
+    // Find next lesson
+    // ==========================
+
+    const { data: nextLesson } = await supabase
+      .from("lessons")
+      .select("id")
+      .eq("course_id", lesson.course_id)
+      .eq("user_id", user.id)
+      .eq("lesson_number", lesson.lesson_number + 1)
+      .single();
 
     const isCourseComplete = progress === 100;
 

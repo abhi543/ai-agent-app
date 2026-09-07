@@ -4,7 +4,6 @@ import { getAuthenticatedUser } from "./supabase-auth";
 interface CourseInsert {
   topic: string;
   level: string;
-  style?: string;
   target_days: number;
   total_lessons: number;
   current_lesson: number;

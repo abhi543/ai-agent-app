@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import {
   Clock3,
   Trophy,
-  BookOpen,
   ChevronLeft,
 } from "lucide-react";
 import Link from "next/link";

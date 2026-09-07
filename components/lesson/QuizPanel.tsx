@@ -10,7 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
-import { saveMistake } from "@/lib/mistake-db";
+import { useElapsedSeconds } from "@/lib/use-elapsed-seconds";
 
 interface QuizQuestion {
   question: string;
@@ -26,10 +26,9 @@ interface QuizPanelProps {
   topic: string;
   lessonTitle: string;
   lessonContent: string;
-  courseId: string;
-  lessonId: string;
   quiz: QuizPayload | null;
   quizError: string | null;
+  isInitialQuizLoading: boolean;
   onQuizGenerated: (quiz: QuizPayload) => void;
   onQuizError: (error: string | null) => void;
   onPassed: (score: number, total: number) => void;
@@ -39,10 +38,9 @@ export default function QuizPanel({
   topic,
   lessonTitle,
   lessonContent,
-  courseId,
-  lessonId,
   quiz,
   quizError,
+  isInitialQuizLoading,
   onQuizGenerated,
   onQuizError,
   onPassed,
@@ -53,6 +51,8 @@ export default function QuizPanel({
   const [generating, setGenerating] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
+  const elapsedSeconds = useElapsedSeconds(generating || isInitialQuizLoading);
+  const isGenerating = generating || isInitialQuizLoading;
 
   async function generateQuiz(previousQuestions: string[] = []) {
     setGenerating(true);
@@ -151,22 +151,9 @@ export default function QuizPanel({
 
           const data = await response.json();
 
-          const explanationText =
-            data?.explanation || "Review this question and try again.";
-
-          explanationList.push(explanationText);
-
-          // Persist this mistake so weak areas / past mistakes can be
-          // surfaced later — failure here should never block the quiz.
-          void saveMistake({
-            course_id: courseId,
-            lesson_id: lessonId,
-            question: question.question,
-            options: question.options,
-            correct_answer: question.options[question.answer],
-            user_answer: question.options[selectedAnswers[index]],
-            explanation: explanationText,
-          });
+          explanationList.push(
+            data?.explanation || "Review this question and try again."
+          );
         }
       }
 
@@ -191,7 +178,7 @@ export default function QuizPanel({
     setSelectedAnswers(updatedAnswers);
   }
 
-  if (generating) {
+  if (isGenerating) {
     return (
       <section className="mt-8 rounded-3xl border border-slate-800 bg-slate-900/80 p-8">
         <div className="flex items-center gap-3">
@@ -207,8 +194,10 @@ export default function QuizPanel({
               Creating your quiz
             </h2>
 
-            <p className="text-sm text-slate-400">
-              EduGPT is preparing questions from this lesson.
+            <p className="text-sm text-slate-400" role="status" aria-live="polite">
+              {elapsedSeconds >= 8
+                ? "Still preparing your questions. This can take a moment."
+                : "EduGPT is preparing questions from this lesson."}
             </p>
           </div>
         </div>
@@ -278,7 +267,7 @@ export default function QuizPanel({
 
         <button
           type="button"
-          disabled={generating || submitting}
+          disabled={isGenerating || submitting}
           onClick={() =>
             generateQuiz(
               quiz.questions.map((question) => question.question)

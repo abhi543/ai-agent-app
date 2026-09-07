@@ -14,7 +14,6 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuth } from "@/app/providers/AuthProvider";
 
 const features = [
   {
@@ -51,39 +50,19 @@ const stats = [
 
 export default function Home() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
   const [goal, setGoal] = useState("");
-  const [goalError, setGoalError] = useState("");
 
   function handleStart() {
     const trimmedGoal = goal.trim();
 
-    if (!trimmedGoal) {
-      // /create-course has no way to collect a goal itself — it
-      // requires one up front. Never navigate there without one;
-      // just point the user at this input instead.
-      setGoalError("Please tell us what you want to learn first.");
-      const input = document.getElementById("goal-input");
-      input?.scrollIntoView({ behavior: "smooth", block: "center" });
-      input?.focus();
-      return;
-    }
-
-    setGoalError("");
-
-    // Already signed in — skip signup entirely and go straight
-    // to course creation, so we never bounce a logged-in user
-    // back through the auth flow.
-    if (!authLoading && user) {
+    if (trimmedGoal) {
       router.push(
-        `/create-course?goal=${encodeURIComponent(trimmedGoal)}`
+        `/auth/signup?goal=${encodeURIComponent(trimmedGoal)}`
       );
       return;
     }
 
-    router.push(
-      `/auth/signup?goal=${encodeURIComponent(trimmedGoal)}`
-    );
+    router.push("/auth/signup");
   }
 
   return (
@@ -172,33 +151,21 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
 
-            {!authLoading && user ? (
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="rounded-xl border border-white/10 bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
-              >
-                Go to dashboard
-              </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => router.push("/auth/login")}
-                  className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  Sign in
-                </button>
+            <button
+              type="button"
+              onClick={() => router.push("/auth/login")}
+              className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+            >
+              Sign in
+            </button>
 
-                <button
-                  type="button"
-                  onClick={() => router.push("/auth/signup")}
-                  className="rounded-xl border border-white/10 bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
-                >
-                  Get started
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              onClick={() => router.push("/auth/signup")}
+              className="rounded-xl border border-white/10 bg-white/[0.08] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/[0.14]"
+            >
+              Get started
+            </button>
 
           </div>
 
@@ -262,13 +229,11 @@ export default function Home() {
                     />
 
                     <input
-                      id="goal-input"
                       type="text"
                       value={goal}
-                      onChange={(event) => {
-                        setGoal(event.target.value);
-                        if (goalError) setGoalError("");
-                      }}
+                      onChange={(event) =>
+                        setGoal(event.target.value)
+                      }
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
                           handleStart();
@@ -295,12 +260,6 @@ export default function Home() {
                   </button>
 
                 </div>
-
-                {goalError && (
-                  <p className="px-4 pb-2 pt-1 text-sm text-red-400">
-                    {goalError}
-                  </p>
-                )}
 
               </div>
 
@@ -598,22 +557,17 @@ export default function Home() {
                 </h2>
 
                 <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">
-                  Tell EduGPT what you want to master. We'll build the
-                  learning journey around you.
+                  {"Tell EduGPT what you want to master. We'll build the learning journey around you."}
                 </p>
 
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  !authLoading && user
-                    ? handleStart()
-                    : router.push("/auth/signup")
-                }
+                onClick={() => router.push("/auth/signup")}
                 className="group flex shrink-0 items-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-slate-950 transition hover:scale-[1.02]"
               >
-                {!authLoading && user ? "Start a new course" : "Create your account"}
+                Create your account
 
                 <ArrowRight
                   size={17}
