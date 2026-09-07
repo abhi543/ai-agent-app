@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export async function POST(req: Request) {
   try {
+    console.info("[lesson-chat] Request received");
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
@@ -41,12 +43,16 @@ export async function POST(req: Request) {
     }
 
     // Save user's message
-    await supabase.from("lesson_messages").insert({
+    const { error: userMessageError } = await supabase.from("lesson_messages").insert({
       lesson_id: lessonId,
       user_id: user.id,
       role: "user",
       message,
     });
+
+    if (userMessageError) {
+      throw userMessageError;
+    }
 
     // Load previous conversation
     const { data: history } = await supabase
@@ -97,19 +103,25 @@ Always explain simply.
     });
 
     // Save AI reply
-    await supabase.from("lesson_messages").insert({
+    const { error: assistantMessageError } = await supabase.from("lesson_messages").insert({
       lesson_id: lessonId,
       user_id: user.id,
       role: "assistant",
       message: reply,
     });
 
+    if (assistantMessageError) {
+      throw assistantMessageError;
+    }
+
+    console.info("[lesson-chat] Response generated");
+
     return NextResponse.json({
       reply,
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("[lesson-chat] Failed to generate response", err);
 
     return NextResponse.json(
       {

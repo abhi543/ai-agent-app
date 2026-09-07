@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BrainCircuit,
@@ -45,7 +45,19 @@ export default function TutorPanel({
 }: TutorPanelProps) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const elapsedSeconds = useElapsedSeconds(loading);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [loading, messages]);
 
   async function askTutor(message?: string) {
     const text = (message ?? question).trim();
@@ -64,6 +76,9 @@ export default function TutorPanel({
     onMessagesChange?.(updatedMessages);
     setQuestion("");
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 45_000);
+
     try {
       const response = await fetch("/api/lesson-chat", {
         method: "POST",
@@ -74,13 +89,18 @@ export default function TutorPanel({
           lessonId,
           message: text,
         }),
+        signal: controller.signal,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.reply) {
+        throw new Error(data?.error || "The AI Mentor could not answer.");
+      }
 
       const assistantMessage: TutorMessage = {
         role: "assistant",
-        message: data.reply || "I couldn't generate a response.",
+        message: data.reply,
       };
 
       onMessagesChange?.([
@@ -90,15 +110,20 @@ export default function TutorPanel({
     } catch (error) {
       console.error("AI Tutor error:", error);
 
+      const isTimeout =
+        error instanceof DOMException && error.name === "AbortError";
+
       onMessagesChange?.([
         ...updatedMessages,
         {
           role: "assistant",
-          message:
-            "Something went wrong while contacting the AI Tutor. Please try again.",
+          message: isTimeout
+            ? "The AI Mentor is taking too long to respond. Please try again."
+            : "The AI Mentor could not answer right now. Please try again.",
         },
       ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   }
@@ -141,7 +166,11 @@ export default function TutorPanel({
 
       {/* Messages */}
 
-      <div className="flex-1 overflow-y-auto p-5">
+      <div
+        ref={messagesContainerRef}
+        className="min-h-0 flex-1 overflow-y-auto p-5"
+        aria-live="polite"
+      >
 
         {messages.length === 0 ? (
 
