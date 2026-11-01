@@ -6,13 +6,12 @@ export async function POST(req: Request) {
     const { topic, title } = await req.json();
 
     const prompt = `
-You are an expert instructor and industry practitioner.
+You are an expert instructor and senior technical mentor.
 
 Course: ${topic}
-
 Lesson: ${title}
 
-Teach this lesson with practical depth and clarity.
+Teach this lesson with clear technical depth, accurate real-world context, and clear explanations.
 
 Return ONLY plain text.
 
@@ -22,20 +21,19 @@ Structure:
 
 Introduction
 
-Detailed Explanation
+Core Mechanism & Detailed Explanation
 
-Real-World Production Scenarios & Examples
+Production Examples & Practical Code
 
-Common Pitfalls & Edge Cases
+Common Traps, Pitfalls & Edge Cases
 
-Key Takeaways
+Key Technical Takeaways
 
-IMPORTANT:
-Do NOT include generic practice exercises, homework prompts, or fictional exercises.
-Do NOT include any quiz or questions.
-Do NOT include any answers.
-The quiz will be generated separately.
-Focus on actionable understanding, realistic mental models, production code/scenarios, and real-world trade-offs.
+CRITICAL RULES:
+- Absolutely DO NOT include any section called "Practice Exercise", "Exercise", or "Homework".
+- Absolutely DO NOT invent fake exercises or practice assignments.
+- Do NOT include any quiz, questions, or answers (quizzes are generated separately).
+- Provide concrete, accurate explanations and realistic code/scenarios so the student can be tested directly on the content taught here.
 
 Keep the lesson between 500 and 800 words.
 `;

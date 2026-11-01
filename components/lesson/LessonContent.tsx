@@ -20,7 +20,22 @@ function splitContent(content: string) {
   return content
     .split(/\n\s*\n/)
     .map((section) => section.trim())
-    .filter(Boolean);
+    .filter((section) => {
+      if (!section) return false;
+      // Filter out any legacy or rogue practice exercise sections
+      const lower = section.toLowerCase();
+      if (
+        lower.startsWith("practice exercise") ||
+        lower.startsWith("# practice exercise") ||
+        lower.startsWith("## practice exercise") ||
+        lower.startsWith("### practice exercise") ||
+        lower.startsWith("exercise:") ||
+        lower.startsWith("practice:")
+      ) {
+        return false;
+      }
+      return true;
+    });
 }
 
 export default function LessonContent({
@@ -89,8 +104,7 @@ export default function LessonContent({
               </p>
 
               <p className="mt-2 text-sm leading-7 text-slate-300">
-                Understand the key ideas in this lesson and learn how to
-                apply them through examples and practice.
+                Master the core mechanics, real-world patterns, and critical edge cases taught in this lesson.
               </p>
             </div>
 
@@ -127,7 +141,7 @@ export default function LessonContent({
                   </div>
 
                   <h2 className="text-lg font-semibold text-white">
-                    {index === 0 ? "Core Concept" : `Key Idea ${index}`}
+                    {index === 0 ? "Core Concept" : `Key Concept & Analysis ${index}`}
                   </h2>
 
                 </div>
@@ -166,11 +180,11 @@ export default function LessonContent({
 
             <div>
               <h2 className="font-semibold text-white">
-                Quick Summary
+                Core Takeaways
               </h2>
 
               <p className="text-sm text-slate-400">
-                Keep these ideas in mind as you practice.
+                Keep these principles in mind before taking the knowledge check.
               </p>
             </div>
           </div>
@@ -178,17 +192,17 @@ export default function LessonContent({
           <div className="space-y-3 text-sm leading-7 text-slate-300">
             <div className="flex gap-3">
               <span className="text-emerald-400">✓</span>
-              <span>Understand the main concept before memorizing details.</span>
+              <span>Focus on the architectural and execution mental model.</span>
             </div>
 
             <div className="flex gap-3">
               <span className="text-emerald-400">✓</span>
-              <span>Use the examples to connect theory with practice.</span>
+              <span>Look closely at edge cases, failure modes, and code behavior.</span>
             </div>
 
             <div className="flex gap-3">
               <span className="text-emerald-400">✓</span>
-              <span>Ask the AI Tutor whenever something is unclear.</span>
+              <span>Use the AI Mentor on the right if any concept needs further breakdown.</span>
             </div>
           </div>
         </motion.section>

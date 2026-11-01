@@ -11,49 +11,53 @@ export async function POST(req: Request) {
     } = await req.json();
 
     const prompt = `
-You are a senior technical interviewer and engineering mentor.
+You are an expert technical examiner.
+
+TASK:
+Generate exactly 3 multiple-choice questions that TEST DIRECTLY ON THE LESSON CONTENT PROVIDED BELOW.
 
 Course:
 ${topic}
 
-Lesson:
+Lesson Title:
 ${lessonTitle}
 
-Lesson Content:
+=== BEGIN LESSON CONTENT ===
 ${lessonContent}
+=== END LESSON CONTENT ===
 
 Previously Asked Questions:
 ${previousQuestions.join("\n")}
 
-Your mission:
-Generate 3 REAL, PRACTICAL, SCENARIO-BASED multiple choice questions that test actual diagnostic and architectural understanding.
+STRICT CONTENT-ALIGNMENT & QUESTION RULES:
+1. CONTENT ACCURACY & ALIGNMENT (MOST IMPORTANT):
+   - Every question MUST directly test a concept, code snippet, edge case, or rule that is EXPLICITLY explained in the "LESSON CONTENT" above.
+   - Do NOT ask questions about unrelated topics or trivia not covered in this lesson.
+   - The correct answer must be indisputably supported by the provided lesson content.
+2. NO SHALLOW DEFINITIONS / MEMORIZATION:
+   - Do not ask: "What is X?", "What does this acronym stand for?", or "Which keyword defines Y?".
+   - Instead ask:
+     * "Based on the lesson, what happens if [scenario from lesson]?"
+     * "According to the explanation above, why does [pitfall] cause issues?"
+     * "In the example shown, what is the expected output/behavior under [condition]?"
+3. DIVERSITY & RETRY FRESHNESS:
+   - Do NOT repeat or rephrase any question in the "Previously Asked Questions" list.
+   - Test 3 distinct sections/concepts from the lesson content.
+4. VALID OPTIONS:
+   - Provide exactly 4 plausible, relevant options per question.
+   - Exactly ONE option must be correct.
+   - The 3 distractors must be realistic misconceptions or errors related to the lesson topic.
 
-STRICT QUESTION GUIDELINES:
-1. NO TRIVIAL / MEMORIZATION QUESTIONS:
-   - NEVER ask definition questions like "What is X?", "What does Y stand for?", or "Which keyword defines Z?".
-   - NEVER ask purely theoretical recall questions.
-2. ASK REAL PRACTICAL QUESTIONS:
-   - Ask "What happens if...", "Spot the bug/bottleneck in this scenario", "Which design/trade-off is best for this requirement?", or "What will be the output or behavior?".
-   - Frame questions around real problems developers encounter in production or real-world usage.
-3. FRESHNESS:
-   - DO NOT repeat or rephrase any question from the "Previously Asked Questions" list.
-   - Every generation must test different practical edge cases or mechanics.
-4. QUALITY OPTIONS:
-   - Provide 4 realistic, plausible options. Avoid obvious joke or throwaway options.
-   - Only ONE option must be clearly correct based on best practices and real technical behavior.
-
-Return ONLY valid JSON.
-
-Format:
+Return ONLY valid JSON in this exact structure:
 {
   "questions": [
     {
-      "question": "Scenario/problem text...",
+      "question": "Clear scenario/question based on the lesson text...",
       "options": [
-        "Option A",
-        "Option B",
-        "Option C",
-        "Option D"
+        "Plausible Option A",
+        "Plausible Option B",
+        "Plausible Option C",
+        "Plausible Option D"
       ],
       "answer": 0
     }
@@ -63,9 +67,8 @@ Format:
 Rules:
 - Exactly 3 questions
 - 4 options each
-- Only ONE correct answer
-- "answer" is the 0-based index of the correct option (0, 1, 2, or 3)
-- JSON ONLY (no markdown fences, no surrounding commentary)
+- "answer" is the 0-based integer index of the correct option (0, 1, 2, or 3)
+- Output pure JSON only without any markdown formatting or commentary.
 `;
 
     const content = await askGroq(
@@ -76,8 +79,8 @@ Rules:
         },
       ],
       {
-        temperature: 0.85,
-        top_p: 0.95,
+        temperature: 0.5,
+        top_p: 0.9,
       }
     );
 
