@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useElapsedSeconds } from "@/lib/use-elapsed-seconds";
+import { saveMistake } from "@/lib/mistake-db";
 
 interface QuizQuestion {
   question: string;
@@ -23,6 +24,8 @@ interface QuizPayload {
 }
 
 interface QuizPanelProps {
+  courseId?: string;
+  lessonId?: string;
   topic: string;
   lessonTitle: string;
   lessonContent: string;
@@ -35,6 +38,8 @@ interface QuizPanelProps {
 }
 
 export default function QuizPanel({
+  courseId = "",
+  lessonId = "",
   topic,
   lessonTitle,
   lessonContent,
@@ -150,10 +155,19 @@ export default function QuizPanel({
           });
 
           const data = await response.json();
+          const explanationText = data?.explanation || "Review this question and try again.";
 
-          explanationList.push(
-            data?.explanation || "Review this question and try again."
-          );
+          explanationList.push(explanationText);
+
+          saveMistake({
+            course_id: courseId,
+            lesson_id: lessonId,
+            question: question.question,
+            options: question.options,
+            correct_answer: question.options[question.answer],
+            user_answer: question.options[selectedAnswers[index]] || "No answer",
+            explanation: explanationText,
+          }).catch((err) => console.warn("Could not auto-save mistake:", err));
         }
       }
 

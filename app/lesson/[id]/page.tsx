@@ -435,6 +435,8 @@ export default function LessonPage() {
             <div className="mx-auto max-w-4xl">
 
               <QuizPanel
+                courseId={course.id}
+                lessonId={lesson.id}
                 topic={course.topic}
                 lessonTitle={lesson.title}
                 lessonContent={lesson.content}

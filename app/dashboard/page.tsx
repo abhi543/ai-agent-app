@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getAuthenticatedUser } from "@/lib/supabase-auth";
+import MistakeReviewCard from "@/components/MistakeReviewCard";
 
 interface CourseRecord {
   id: string;
@@ -771,6 +772,9 @@ export default function DashboardPage() {
           </div>
 
         </section>
+
+        {/* Mistake & Weak Spot Review */}
+        <MistakeReviewCard />
 
       </div>
 
