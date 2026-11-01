@@ -8,7 +8,6 @@ import { getAuthenticatedUser } from "@/lib/supabase-auth";
 import Header from "@/components/lesson/Header";
 import Sidebar from "@/components/lesson/Sidebar";
 import LessonContent from "@/components/lesson/LessonContent";
-import TutorPanel from "@/components/lesson/TutorPanel";
 import QuizPanel from "@/components/lesson/QuizPanel";
 import CompletionPanel from "@/components/lesson/CompletionPanel";
 import LessonActionModal from "@/components/lesson/LessonActionModal";
@@ -63,7 +62,6 @@ export default function LessonPage() {
   const [lesson, setLesson] = useState<LessonRecord | null>(null);
   const [course, setCourse] = useState<CourseRecord | null>(null);
   const [lessons, setLessons] = useState<LessonListItem[]>([]);
-  const [messages, setMessages] = useState<LessonMessage[]>([]);
 
   const [quiz, setQuiz] = useState<QuizPayload | null>(null);
   const [quizError, setQuizError] = useState<string | null>(null);
@@ -232,25 +230,9 @@ export default function LessonPage() {
           .eq("user_id", user.id);
       }
 
-      /*
-       * Load AI mentor history for this lesson and this user.
-       */
-      const { data: previousMessages, error: messagesError } =
-        await supabase
-          .from("lesson_messages")
-          .select("role, message")
-          .eq("lesson_id", currentLesson.id)
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: true });
-
-      if (messagesError) {
-        console.error("Message loading error:", messagesError);
-      }
-
       setLesson(currentLesson);
       setCourse(courseData);
       setLessons((lessonList || []) as LessonListItem[]);
-      setMessages((previousMessages || []) as LessonMessage[]);
 
       /*
        * Generate the first quiz automatically.
@@ -422,9 +404,9 @@ export default function LessonPage() {
           </div>
         </div>
 
-        {/* CENTER */}
+        {/* CENTER - EXPANDED CLEAN READING VIEW */}
 
-        <div className="col-span-12 min-w-0 lg:col-span-8 xl:col-span-6 pb-24">
+        <div className="col-span-12 min-w-0 xl:col-span-10 pb-24">
           <LessonContent
             lessonNumber={lesson.lesson_number}
             title={lesson.title}
@@ -461,18 +443,6 @@ export default function LessonPage() {
             }}
             onComplete={completeLesson}
           />
-        </div>
-
-        {/* RIGHT AI TUTOR */}
-
-        <div className="col-span-12 min-w-0 lg:col-span-4 xl:col-span-4">
-          <div className="sticky top-20 h-[calc(100vh-5rem)]">
-            <TutorPanel
-              lessonId={lesson.id}
-              messages={messages}
-              onMessagesChange={setMessages}
-            />
-          </div>
         </div>
 
       </div>
