@@ -84,6 +84,13 @@ export default function LessonPage() {
     );
   }, [lesson, course]);
 
+  const currentCourseXp = useMemo(() => {
+    const baseCompleted = course?.completed_lessons || 0;
+    const count = lesson?.completed ? Math.max(baseCompleted, 1) : baseCompleted;
+    return count * 100;
+  }, [course, lesson]);
+
+
   const generateQuiz = useCallback(async (
     topic: string,
     lessonTitle: string,
@@ -380,7 +387,7 @@ export default function LessonPage() {
         courseTitle={course.topic}
         lessonTitle={lesson.title}
         lessonNumber={lesson.lesson_number}
-        xp={0}
+        xp={currentCourseXp}
         duration={15}
       />
 
@@ -395,7 +402,7 @@ export default function LessonPage() {
               lessons={lessons}
               currentLessonId={lesson.id}
               progress={course.progress}
-              xp={0}
+              xp={currentCourseXp}
               streak={course.streak || 0}
               onLessonClick={(lessonId) => {
                 router.push(`/lesson/${lessonId}`);
