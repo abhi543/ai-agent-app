@@ -4,17 +4,15 @@ import { askGroq, parseModelJson } from "@/lib/ai";
 export async function POST(req: Request) {
   try {
     const {
-  topic,
-  lessonTitle,
-  lessonContent,
-  previousQuestions = [],
-} = await req.json();
+      topic,
+      lessonTitle,
+      lessonContent,
+      previousQuestions = [],
+    } = await req.json();
 
     const prompt = `
-You are an expert teacher.
-DO NOT generate any question that appears in the "Previously Asked Questions" list.
+You are a senior technical interviewer and engineering mentor.
 
-Every retry must contain completely different questions.
 Course:
 ${topic}
 
@@ -23,49 +21,51 @@ ${lessonTitle}
 
 Lesson Content:
 ${lessonContent}
-Previously Asked Questions:
 
+Previously Asked Questions:
 ${previousQuestions.join("\n")}
 
-Your task is to generate a BRAND NEW quiz every time.
+Your mission:
+Generate 3 REAL, PRACTICAL, SCENARIO-BASED multiple choice questions that test actual diagnostic and architectural understanding.
 
-VERY IMPORTANT RULES:
-
-- NEVER repeat previous questions.
-- Every API call MUST produce different questions.
-- Ask about different concepts from the lesson.
-- Change wording completely.
-- Use different examples.
-- Mix difficulty (easy, medium, hard).
-- Avoid asking the same fact twice.
-- Questions should test understanding, not memorization.
+STRICT QUESTION GUIDELINES:
+1. NO TRIVIAL / MEMORIZATION QUESTIONS:
+   - NEVER ask definition questions like "What is X?", "What does Y stand for?", or "Which keyword defines Z?".
+   - NEVER ask purely theoretical recall questions.
+2. ASK REAL PRACTICAL QUESTIONS:
+   - Ask "What happens if...", "Spot the bug/bottleneck in this scenario", "Which design/trade-off is best for this requirement?", or "What will be the output or behavior?".
+   - Frame questions around real problems developers encounter in production or real-world usage.
+3. FRESHNESS:
+   - DO NOT repeat or rephrase any question from the "Previously Asked Questions" list.
+   - Every generation must test different practical edge cases or mechanics.
+4. QUALITY OPTIONS:
+   - Provide 4 realistic, plausible options. Avoid obvious joke or throwaway options.
+   - Only ONE option must be clearly correct based on best practices and real technical behavior.
 
 Return ONLY valid JSON.
 
 Format:
-
 {
-  "questions":[
+  "questions": [
     {
-      "question":"Question text",
-      "options":[
+      "question": "Scenario/problem text...",
+      "options": [
         "Option A",
         "Option B",
         "Option C",
         "Option D"
       ],
-      "answer":1
+      "answer": 0
     }
   ]
 }
 
 Rules:
-
 - Exactly 3 questions
 - 4 options each
 - Only ONE correct answer
-- answer is the correct option index (0-3)
-- JSON ONLY
+- "answer" is the 0-based index of the correct option (0, 1, 2, or 3)
+- JSON ONLY (no markdown fences, no surrounding commentary)
 `;
 
     const content = await askGroq(
@@ -76,7 +76,7 @@ Rules:
         },
       ],
       {
-        temperature: 1,
+        temperature: 0.85,
         top_p: 0.95,
       }
     );
@@ -84,7 +84,7 @@ Rules:
     const quiz = parseModelJson(content);
 
     if (!quiz?.questions || !Array.isArray(quiz.questions)) {
-      throw new Error("Invalid quiz.");
+      throw new Error("Invalid quiz format received from AI.");
     }
 
     return NextResponse.json(quiz);

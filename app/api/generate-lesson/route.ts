@@ -6,13 +6,13 @@ export async function POST(req: Request) {
     const { topic, title } = await req.json();
 
     const prompt = `
-You are an expert teacher.
+You are an expert instructor and industry practitioner.
 
 Course: ${topic}
 
 Lesson: ${title}
 
-Teach this lesson in a beginner-friendly way.
+Teach this lesson with practical depth and clarity.
 
 Return ONLY plain text.
 
@@ -20,23 +20,22 @@ Structure:
 
 # ${title}
 
-Structure:
-
 Introduction
 
 Detailed Explanation
 
-Examples
+Real-World Production Scenarios & Examples
 
-Key Points
+Common Pitfalls & Edge Cases
 
-Practice Exercise
+Key Takeaways
 
 IMPORTANT:
-Do NOT include any quiz.
-Do NOT include any questions.
+Do NOT include generic practice exercises, homework prompts, or fictional exercises.
+Do NOT include any quiz or questions.
 Do NOT include any answers.
 The quiz will be generated separately.
+Focus on actionable understanding, realistic mental models, production code/scenarios, and real-world trade-offs.
 
 Keep the lesson between 500 and 800 words.
 `;
