@@ -11,6 +11,7 @@ import LessonContent from "@/components/lesson/LessonContent";
 import TutorPanel from "@/components/lesson/TutorPanel";
 import QuizPanel from "@/components/lesson/QuizPanel";
 import CompletionPanel from "@/components/lesson/CompletionPanel";
+import LessonActionModal from "@/components/lesson/LessonActionModal";
 import Loading from "@/components/lesson/Loading";
 
 interface LessonMessage {
@@ -423,7 +424,7 @@ export default function LessonPage() {
 
         {/* CENTER */}
 
-        <div className="col-span-12 min-w-0 lg:col-span-8 xl:col-span-6">
+        <div className="col-span-12 min-w-0 lg:col-span-8 xl:col-span-6 pb-24">
           <LessonContent
             lessonNumber={lesson.lesson_number}
             title={lesson.title}
@@ -431,42 +432,35 @@ export default function LessonPage() {
             progress={currentLessonProgress}
           />
 
-          <div className="bg-slate-950 px-6 pb-10 lg:px-10">
-            <div className="mx-auto max-w-4xl">
-
-              <QuizPanel
-                courseId={course.id}
-                lessonId={lesson.id}
-                topic={course.topic}
-                lessonTitle={lesson.title}
-                lessonContent={lesson.content}
-                quiz={quiz}
-                quizError={quizError}
-                isInitialQuizLoading={quizLoading}
-                onQuizGenerated={(newQuiz) => {
-                  setQuiz(newQuiz);
-                  setQuizError(null);
-                }}
-                onQuizError={setQuizError}
-                onPassed={(score, total) => {
-                  setQuizPassed(true);
-                  setCompletionMessage(
-                    `🎉 Quiz passed — ${score}/${total}. You can now complete the lesson.`
-                  );
-                }}
-              />
-
-              <CompletionPanel
-                completed={lesson.completed}
-                quizPassed={quizPassed}
-                saving={saving}
-                completionMessage={completionMessage}
-                onComplete={completeLesson}
-              />
-
-              <div className="h-10" />
-            </div>
-          </div>
+          {/* Sticky Bottom Floating Modal Trigger for Assessment & Completion */}
+          <LessonActionModal
+            courseId={course.id}
+            lessonId={lesson.id}
+            topic={course.topic}
+            lessonTitle={lesson.title}
+            lessonContent={lesson.content}
+            lessonNumber={lesson.lesson_number}
+            totalLessons={course.total_lessons}
+            completed={lesson.completed}
+            quiz={quiz}
+            quizError={quizError}
+            quizLoading={quizLoading}
+            quizPassed={quizPassed}
+            saving={saving}
+            completionMessage={completionMessage}
+            onQuizGenerated={(newQuiz) => {
+              setQuiz(newQuiz);
+              setQuizError(null);
+            }}
+            onQuizError={setQuizError}
+            onPassed={(score, total) => {
+              setQuizPassed(true);
+              setCompletionMessage(
+                `🎉 Quiz passed — ${score}/${total}. You can now complete the lesson.`
+              );
+            }}
+            onComplete={completeLesson}
+          />
         </div>
 
         {/* RIGHT AI TUTOR */}
