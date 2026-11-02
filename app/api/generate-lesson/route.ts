@@ -6,36 +6,32 @@ export async function POST(req: Request) {
     const { topic, title } = await req.json();
 
     const prompt = `
-You are an expert instructor and senior technical mentor.
+You are a Principal Software Engineer and master technical instructor creating a world-class, deep-dive masterclass lesson.
 
 Course: ${topic}
-Lesson: ${title}
+Lesson Title: ${title}
 
-Teach this lesson with clear technical depth, accurate real-world context, and clear explanations.
+YOUR GOAL:
+Write a comprehensive, exhaustive, and practically rich technical lesson on "${title}".
+AVOID shallow, hand-waving explanations. Go deep into actual mechanics, architectural trade-offs, internal implementation details, and real code.
 
-Return ONLY plain text.
-
-Structure:
-
-# ${title}
-
-Introduction
-
-Core Mechanism & Detailed Explanation
-
-Production Examples & Practical Code
-
-Common Traps, Pitfalls & Edge Cases
-
-Key Technical Takeaways
+FORMATTING REQUIREMENTS:
+- Use standard Markdown headings with descriptive, meaningful names:
+  ## [Section Name]
+- DO NOT use generic headings like "Key Idea" or "Section 1". Use real engineering titles like:
+  ## Architecture & Internal Mechanics
+  ## Step-by-Step Implementation & Working Code
+  ## Deep Dive: Trade-offs, Performance & Scalability
+  ## Production Pitfalls, Debugging & Edge Cases
+  ## Key Engineering Takeaways
+- When presenting comparison data or tables, format them cleanly with markdown tables or clear bulleted breakdowns.
+- For code snippets, provide complete, realistic, syntactically correct code blocks with language tags (\`\`\`python, \`\`\`typescript, etc.) and explain what happens line-by-line.
 
 CRITICAL RULES:
-- Absolutely DO NOT include any section called "Practice Exercise", "Exercise", or "Homework".
-- Absolutely DO NOT invent fake exercises or practice assignments.
-- Do NOT include any quiz, questions, or answers (quizzes are generated separately).
-- Provide concrete, accurate explanations and realistic code/scenarios so the student can be tested directly on the content taught here.
-
-Keep the lesson between 500 and 800 words.
+1. DEPTH: Provide thorough explanations of *why* things work, memory/CPU trade-offs, algorithms, and real failure modes.
+2. NO GENERIC PRACTICE EXERCISES: Do NOT include sections called "Practice Exercise", "Homework", or "Exercises".
+3. NO QUIZZES OR TEST QUESTIONS: Quizzes are generated dynamically in a separate step.
+4. TARGET LENGTH: Comprehensive and detailed (1,000 to 1,600 words of rich content). Do not rush or provide brief summaries.
 `;
 
     const content = await askGroq([
