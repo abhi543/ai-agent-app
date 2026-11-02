@@ -11,10 +11,10 @@ export async function POST(req: Request) {
     } = await req.json();
 
     const prompt = `
-You are an expert technical examiner.
+You are an encouraging, friendly teacher testing a student on what they just learned.
 
-TASK:
-Generate exactly 3 multiple-choice questions that TEST DIRECTLY ON THE LESSON CONTENT PROVIDED BELOW.
+GOAL:
+Generate exactly 3 clear, accessible, confidence-building multiple choice questions that verify the student understood the core ideas taught in this lesson.
 
 Course:
 ${topic}
@@ -22,37 +22,32 @@ ${topic}
 Lesson Title:
 ${lessonTitle}
 
-=== BEGIN LESSON CONTENT ===
+=== LESSON CONTENT TO BASE QUESTIONS ON ===
 ${lessonContent}
 === END LESSON CONTENT ===
 
 Previously Asked Questions:
 ${previousQuestions.join("\n")}
 
-STRICT CONTENT-ALIGNMENT & QUESTION RULES:
-1. CONTENT ACCURACY & ALIGNMENT (MOST IMPORTANT):
-   - Every question MUST directly test a concept, code snippet, edge case, or rule that is EXPLICITLY explained in the "LESSON CONTENT" above.
-   - Do NOT ask questions about unrelated topics or trivia not covered in this lesson.
-   - The correct answer must be indisputably supported by the provided lesson content.
-2. NO SHALLOW DEFINITIONS / MEMORIZATION:
-   - Do not ask: "What is X?", "What does this acronym stand for?", or "Which keyword defines Y?".
-   - Instead ask:
-     * "Based on the lesson, what happens if [scenario from lesson]?"
-     * "According to the explanation above, why does [pitfall] cause issues?"
-     * "In the example shown, what is the expected output/behavior under [condition]?"
-3. DIVERSITY & RETRY FRESHNESS:
-   - Do NOT repeat or rephrase any question in the "Previously Asked Questions" list.
-   - Test 3 distinct sections/concepts from the lesson content.
-4. VALID OPTIONS:
-   - Provide exactly 4 plausible, relevant options per question.
-   - Exactly ONE option must be correct.
-   - The 3 distractors must be realistic misconceptions or errors related to the lesson topic.
+STRICT GUIDELINES:
+1. TEST UNDERSTANDING, NOT MEMORIZATION OR OBSCURE DETAILS:
+   - Ask about the main concepts, real-world analogies, or core principles taught in the text above.
+   - Example style: "In the analogy of [concept], why is X preferred over Y?" or "What is the primary benefit of using [concept] according to the lesson?"
+   - DO NOT write tricky, punitive, or confusing questions with double negatives.
+2. CLEAR & DISTINCT OPTIONS:
+   - Provide 4 options that are easy to read and understand.
+   - Only ONE option should be clearly correct according to the lesson.
+   - The other 3 options should represent common misunderstandings or clearly incorrect ideas (not tricky borderline choices).
+3. FRESHNESS:
+   - Do not repeat previous questions.
+4. TONE:
+   - Warm, clear, and focused on reinforcing learning so the student feels capable and motivated.
 
 Return ONLY valid JSON in this exact structure:
 {
   "questions": [
     {
-      "question": "Clear scenario/question based on the lesson text...",
+      "question": "Clear, friendly question asking about a key takeaway from the lesson...",
       "options": [
         "Plausible Option A",
         "Plausible Option B",
@@ -68,7 +63,7 @@ Rules:
 - Exactly 3 questions
 - 4 options each
 - "answer" is the 0-based integer index of the correct option (0, 1, 2, or 3)
-- Output pure JSON only without any markdown formatting or commentary.
+- JSON ONLY (no markdown fences, no extra text)
 `;
 
     const content = await askGroq(
@@ -79,7 +74,7 @@ Rules:
         },
       ],
       {
-        temperature: 0.5,
+        temperature: 0.4,
         top_p: 0.9,
       }
     );

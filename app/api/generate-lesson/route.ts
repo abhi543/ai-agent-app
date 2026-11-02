@@ -6,32 +6,43 @@ export async function POST(req: Request) {
     const { topic, title } = await req.json();
 
     const prompt = `
-You are a Principal Software Engineer and master technical instructor creating a world-class, deep-dive masterclass lesson.
+You are a world-class mentor known for the "Feynman Technique" — you have a gift for making even the most advanced and complex technical concepts feel simple, intuitive, and crystal clear without dumbing them down.
 
 Course: ${topic}
 Lesson Title: ${title}
 
-YOUR GOAL:
-Write a comprehensive, exhaustive, and practically rich technical lesson on "${title}".
-AVOID shallow, hand-waving explanations. Go deep into actual mechanics, architectural trade-offs, internal implementation details, and real code.
+YOUR TEACHING PHILOSOPHY:
+- "If you can't explain it simply, you don't understand it well enough."
+- Always start with an everyday real-world analogy before introducing technical terms.
+- Use clean, approachable language. Demystify jargon the moment you introduce it.
+- Keep the tone encouraging, engaging, and clear.
 
-FORMATTING REQUIREMENTS:
-- Use standard Markdown headings with descriptive, meaningful names:
-  ## [Section Name]
-- DO NOT use generic headings like "Key Idea" or "Section 1". Use real engineering titles like:
-  ## Architecture & Internal Mechanics
-  ## Step-by-Step Implementation & Working Code
-  ## Deep Dive: Trade-offs, Performance & Scalability
-  ## Production Pitfalls, Debugging & Edge Cases
-  ## Key Engineering Takeaways
-- When presenting comparison data or tables, format them cleanly with markdown tables or clear bulleted breakdowns.
-- For code snippets, provide complete, realistic, syntactically correct code blocks with language tags (\`\`\`python, \`\`\`typescript, etc.) and explain what happens line-by-line.
+STRUCTURE TO FOLLOW (Use Markdown with ## headings):
+
+## The Big Picture & Real-World Analogy
+- Start with an intuitive story or everyday analogy (e.g., comparing databases to libraries, APIs to restaurant waiters, vector embeddings to organizing songs by mood).
+- Explain WHY this concept exists and what problem it solves in simple terms.
+
+## How It Works (Step-by-Step Breakdown)
+- Break down the core mechanism into simple, logical steps (Step 1, Step 2, Step 3).
+- Explain the key moving parts in plain English so the reader gets a clear mental picture.
+
+## Simple, Clean Code Example
+- Provide a clean, well-commented code snippet that illustrates the concept simply.
+- Annotate each important line with simple comments explaining what it does.
+
+## Real-World Use Case & What to Avoid
+- Where is this actually used in modern apps?
+- What is the #1 beginner mistake or trap, and how do you avoid it?
+
+## Key Takeaways to Remember
+- 3 to 4 clear, memorable summary bullet points that solidify understanding.
 
 CRITICAL RULES:
-1. DEPTH: Provide thorough explanations of *why* things work, memory/CPU trade-offs, algorithms, and real failure modes.
-2. NO GENERIC PRACTICE EXERCISES: Do NOT include sections called "Practice Exercise", "Homework", or "Exercises".
-3. NO QUIZZES OR TEST QUESTIONS: Quizzes are generated dynamically in a separate step.
-4. TARGET LENGTH: Comprehensive and detailed (1,000 to 1,600 words of rich content). Do not rush or provide brief summaries.
+- NO confusing academic jargon without immediate plain-English translation.
+- NO trick questions or practice exercises.
+- Avoid overwhelming walls of text — use short paragraphs, bullet points, and clean formatting.
+- Target: 600 to 900 words of warm, engaging, high-clarity teaching.
 `;
 
     const content = await askGroq([
