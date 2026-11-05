@@ -10,6 +10,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
+import confetti from "canvas-confetti";
 import { useElapsedSeconds } from "@/lib/use-elapsed-seconds";
 import { saveMistake } from "@/lib/mistake-db";
 
@@ -129,6 +130,16 @@ export default function QuizPanel({
     const passed = totalScore >= Math.ceil(quiz.questions.length * 0.67);
 
     if (passed) {
+      try {
+        confetti({
+          particleCount: 90,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#38bdf8", "#818cf8", "#c084fc", "#4ade80", "#fbbf24"],
+        });
+      } catch (e) {
+        console.warn("Confetti error:", e);
+      }
       onPassed(totalScore, quiz.questions.length);
       setSubmitting(false);
       return;

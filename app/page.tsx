@@ -263,6 +263,30 @@ export default function Home() {
 
               </div>
 
+              {/* Instant 1-Click Topic Chips */}
+              <div className="mt-4 flex flex-wrap items-center gap-2 max-w-2xl">
+                <span className="text-xs text-slate-400 font-medium mr-1">Trending topics:</span>
+                {[
+                  { label: "Python Basics", icon: "🐍", query: "Python programming for beginners" },
+                  { label: "How LLMs Work", icon: "🤖", query: "How Large Language Models and AI work" },
+                  { label: "Next.js 16", icon: "⚛️", query: "Next.js App Router and React 19" },
+                  { label: "System Design", icon: "🚀", query: "System design and scalability fundamentals" },
+                ].map((chip) => (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => {
+                      setGoal(chip.query);
+                      router.push(`/auth/signup?goal=${encodeURIComponent(chip.query)}`);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] hover:bg-white/[0.12] hover:border-cyan-400/40 px-3.5 py-1.5 text-xs text-slate-300 hover:text-white transition shadow-sm"
+                  >
+                    <span>{chip.icon}</span>
+                    <span>{chip.label}</span>
+                  </button>
+                ))}
+              </div>
+
               <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
 
                 <span className="flex items-center gap-2">

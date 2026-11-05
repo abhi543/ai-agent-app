@@ -532,7 +532,27 @@ export default function DashboardPage() {
                     </div>
 
                     <p className="mt-2 text-2xl font-bold">
-                      {course.streak || 0}
+                      {course.streak || 0}d 🔥
+                    </p>
+
+                  </div>
+
+                  <div className="col-span-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+
+                    <div className="flex items-center justify-between text-amber-400">
+                      <span className="text-xs font-semibold uppercase tracking-wider">
+                        Rank & League
+                      </span>
+                      <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                        Level {Math.floor((stats.lessons * 100) / 300) + 1}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-base font-bold text-white">
+                      {(stats.lessons * 100) >= 500 ? "Senior Architect 🚀" : (stats.lessons * 100) >= 200 ? "Code Apprentice ⚡" : "Novice Explorer 🌱"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {stats.lessons * 100} Total XP Earned
                     </p>
 
                   </div>
